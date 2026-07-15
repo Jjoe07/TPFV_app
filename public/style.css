@@ -1,0 +1,384 @@
+/* ==========================================
+   Variables de couleurs pour un thème cohérent
+   ========================================== */
+:root {
+    --bleu-primaire: #1A56DB;
+    --bleu-secondaire: #1E40AF;
+    --fond-page: #F3F4F6;
+    --blanc: #FFFFFF;
+    --texte-sombre: #111827;
+    --texte-clair: #6B7280;
+    --bordure: #E5E7EB;
+}
+
+/* ==========================================
+   Styles Globaux
+   ========================================== */
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--fond-page);
+    color: var(--texte-sombre);
+    margin: 0;
+    padding: 0;
+}
+
+/* ==========================================
+   En-tête et Navigation
+   ========================================== */
+.en-tete {
+    background-color: var(--blanc);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo-container h1 {
+    margin: 0;
+    color: var(--bleu-primaire);
+    font-size: 22px;
+}
+
+.barre-recherche-globale {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-grow: 1;
+    max-width: 500px;
+    margin: 0 30px;
+}
+
+.select-header, .input-header {
+    padding: 10px 15px;
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 0; 
+    background-color: var(--fond-page);
+}
+
+.input-header {
+    flex-grow: 1; 
+}
+
+.onglets {
+    display: flex;
+    gap: 10px;
+}
+
+.onglet {
+    background-color: transparent;
+    color: var(--texte-clair);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.onglet:hover {
+    background-color: var(--fond-page);
+    color: var(--bleu-primaire);
+}
+
+.onglet.actif {
+    background-color: #DBEAFE;
+    color: var(--bleu-primaire);
+}
+
+/* ==========================================
+   Mise en page Principale (Conteneur et Grilles)
+   ========================================== */
+.conteneur {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.carte {
+    background: var(--blanc);
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.carte.transparent {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.carte:not(.transparent):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.carte h2 {
+    margin-top: 0;
+    color: var(--texte-sombre);
+    font-size: 20px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--fond-page);
+    padding-bottom: 10px;
+}
+
+.grille-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* ==========================================
+   Formulaires
+   ========================================== */
+.champ-groupe {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.champ-groupe label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texte-clair);
+    margin-bottom: 8px;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #F9FAFB;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--bleu-primaire);
+    background-color: var(--blanc);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+}
+
+.btn-principal {
+    background-color: var(--bleu-primaire);
+    color: var(--blanc);
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.btn-principal:hover {
+    background-color: var(--bleu-secondaire);
+}
+
+.btn-principal:active {
+    transform: scale(0.98);
+}
+
+.btn-principal.secondaire {
+    background-color: #059669;
+}
+.btn-principal.secondaire:hover {
+    background-color: #047857;
+}
+
+/* ==========================================
+   Listes de données (Patients & Inventaire)
+   ========================================== */
+.liste-donnees {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.liste-donnees li {
+    background: var(--blanc);
+    padding: 20px;
+    border-left: 5px solid var(--bleu-primaire);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.liste-donnees li:hover {
+    transform: translateX(5px);
+}
+
+/* ==========================================
+   Animations et SPA Logic
+   ========================================== */
+.section-cachee {
+    display: none !important;
+}
+
+.section-visible {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+#modal-edition.section-cachee { display: none !important; }
+
+/* ==========================================
+   Media Queries (Responsive)
+   ========================================== */
+@media (max-width: 768px) {
+    .en-tete {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .barre-recherche-globale {
+        max-width: 100%;
+        margin: 0;
+        width: 100%;
+    }
+
+    .grille-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+
+/* ==========================================
+   NOUVEAU : Design des Alertes Personnalisées Animées
+   ========================================== */
+.overlay-alerte {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(17, 24, 39, 0.4); /* Fond sombre */
+    backdrop-filter: blur(8px); /* Floutage moderne de l'arrière-plan */
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeInAlerte 0.25s ease-out forwards;
+}
+
+.boite-alerte {
+    background: var(--blanc);
+    padding: 35px 30px;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    transform: scale(0.6) translateY(30px);
+    opacity: 0;
+    /* Effet "élastique" d'entrée */
+    animation: zoomInAlerte 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.icone-alerte {
+    font-size: 60px;
+    margin-bottom: 15px;
+    display: inline-block;
+}
+
+.boite-alerte h3 {
+    margin: 0 0 12px 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.boite-alerte p {
+    color: var(--texte-clair);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 25px 0;
+}
+
+/* Adaptations selon le type de message */
+.boite-alerte.succes h3 { color: #10B981; }
+.boite-alerte.erreur h3 { color: #EF4444; }
+.boite-alerte.info h3 { color: #3B82F6; }
+
+.btn-alerte {
+    background-color: var(--bleu-primaire);
+    color: var(--blanc);
+    border: none;
+    padding: 12px 35px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(26, 86, 219, 0.2);
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.btn-alerte:hover {
+    background-color: var(--bleu-secondaire);
+    box-shadow: 0 10px 15px -3px rgba(26, 86, 219, 0.3);
+}
+
+.btn-alerte:active {
+    transform: scale(0.96);
+}
+
+/* Animations de sortie lors de la fermeture */
+.overlay-alerte.fermeture {
+    animation: fadeOutAlerte 0.2s ease-in forwards;
+}
+
+.overlay-alerte.fermeture .boite-alerte {
+    animation: zoomOutAlerte 0.2s ease-in forwards;
+}
+
+@keyframes fadeInAlerte {
+    to { opacity: 1; }
+}
+
+@keyframes zoomInAlerte {
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOutAlerte {
+    to { opacity: 0; }
+}
+
+@keyframes zoomOutAlerte {
+    to {
+        transform: scale(0.85) translateY(15px);
+        opacity: 0;
+    }
+}
