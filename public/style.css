@@ -1,6 +1,6 @@
-/* ==========================================
-   Variables de couleurs pour un thème cohérent
-   ========================================== */
+/* =========================================================================
+   Variables de couleurs pour un thème graphique cohérent
+   ========================================================================= */
 :root {
     --bleu-primaire: #1A56DB;
     --bleu-secondaire: #1E40AF;
@@ -11,9 +11,9 @@
     --bordure: #E5E7EB;
 }
 
-/* ==========================================
-   Styles Globaux
-   ========================================== */
+/* =========================================================================
+   Styles de Base et Reset
+   ========================================================================= */
 body {
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--fond-page);
@@ -22,9 +22,13 @@ body {
     padding: 0;
 }
 
-/* ==========================================
-   En-tête et Navigation
-   ========================================== */
+body.modal-ouvert {
+    overflow: hidden !important;
+}
+
+/* =========================================================================
+   En-tête de l'Application Principale
+   ========================================================================= */
 .en-tete {
     background-color: var(--blanc);
     padding: 15px 30px;
@@ -57,7 +61,6 @@ body {
     border: 1px solid var(--bordure);
     border-radius: 8px;
     font-size: 14px;
-    margin-bottom: 0; 
     background-color: var(--fond-page);
 }
 
@@ -92,9 +95,9 @@ body {
     color: var(--bleu-primaire);
 }
 
-/* ==========================================
-   Mise en page Principale (Conteneur et Grilles)
-   ========================================== */
+/* =========================================================================
+   Structure & Grilles
+   ========================================================================= */
 .conteneur {
     max-width: 900px;
     margin: 40px auto;
@@ -136,9 +139,9 @@ body {
     gap: 20px;
 }
 
-/* ==========================================
-   Formulaires
-   ========================================== */
+/* =========================================================================
+   Formulaires et Champs de Saisie
+   ========================================================================= */
 .champ-groupe {
     display: flex;
     flex-direction: column;
@@ -198,9 +201,9 @@ input:focus, select:focus, textarea:focus {
     background-color: #047857;
 }
 
-/* ==========================================
-   Listes de données (Patients & Inventaire)
-   ========================================== */
+/* =========================================================================
+   Affichage des Fiches de Renseignements (Dossiers)
+   ========================================================================= */
 .liste-donnees {
     list-style-type: none;
     padding: 0;
@@ -223,162 +226,244 @@ input:focus, select:focus, textarea:focus {
     transform: translateX(5px);
 }
 
-/* ==========================================
-   Animations et SPA Logic
-   ========================================== */
-.section-cachee {
-    display: none !important;
-}
-
-.section-visible {
-    display: block;
-}
+.section-cachee { display: none !important; }
+.section-visible { display: block; }
 
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade {
     animation: fadeInUp 0.4s ease-out forwards;
 }
 
-#modal-edition.section-cachee { display: none !important; }
-
-/* ==========================================
-   Media Queries (Responsive)
-   ========================================== */
-@media (max-width: 768px) {
-    .en-tete {
-        flex-direction: column;
-        gap: 15px;
-    }
+/* =========================================================================
+   Écran de Connexion Responsive Format XXL & Lissé
+   ========================================================================= */
+#ecran-connexion {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #2b3fa3; 
     
-    .barre-recherche-globale {
-        max-width: 100%;
-        margin: 0;
-        width: 100%;
-    }
-
-    .grille-2 {
-        grid-template-columns: 1fr;
-        gap: 0;
-    }
+    background-image: linear-gradient(rgba(43, 63, 163, 0.15), rgba(43, 63, 163, 0.15)), 
+                      url('logo.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: auto clamp(400px, 115vh, 1150px); 
+    background-attachment: fixed;
+    
+    image-rendering: -webkit-optimize-contrast; 
+    image-rendering: crisp-edges;               
+    transition: all 0.3s ease;
 }
 
-/* ==========================================
-   NOUVEAU : Design des Alertes Personnalisées Animées
-   ========================================== */
-.overlay-alerte {
+/* Carte en Verre Transparent (Glassmorphism) */
+.carte-connexion {
+    background-color: rgba(255, 255, 255, 0.85); 
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 40px 30px;
+    border-radius: 16px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+}
+
+#ecran-connexion label {
+    color: #000000 !important;       
+    font-weight: 800 !important;     
+    font-size: 15px !important;      
+}
+
+/* =========================================================================
+   Barre des Sous-Onglets (Patients)
+   ========================================================================= */
+.sous-onglets {
+    background-color: #E5E7EB; 
+    padding: 6px;
+    border-radius: 10px;
+    display: inline-flex;
+    gap: 5px;
+}
+
+.btn-sous-onglet {
+    background: transparent;
+    border: none;
+    color: var(--texte-clair);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.25s ease;
+}
+
+.btn-sous-onglet.actif {
+    background-color: var(--blanc);
+    color: var(--bleu-primaire);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================================================
+   Pagination Graphique
+   ========================================================================= */
+.pagination-conteneur {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--blanc);
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: var(--texte-clair);
+    font-weight: 600;
+}
+
+.pagination-boutons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-page {
+    background-color: #F3F4F6;
+    border: 1px solid var(--bordure);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #374151;
+    transition: all 0.2s ease;
+}
+
+.btn-page:hover:not(:disabled) {
+    background-color: #E5E7EB;
+    color: var(--texte-sombre);
+}
+
+.btn-page:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* =========================================================================
+   Modale de Modification Centrée & Figée
+   ========================================================================= */
+#modal-edition {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(17, 24, 39, 0.4); /* Fond sombre */
-    backdrop-filter: blur(8px); /* Floutage moderne de l'arrière-plan */
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 10000;
+    background: rgba(17, 24, 39, 0.7); 
+    backdrop-filter: blur(4px); 
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    animation: fadeInAlerte 0.25s ease-out forwards;
+}
+
+#modal-edition .carte {
+    width: 90%;
+    max-width: 560px; 
+    max-height: 95vh;
+    padding: 20px 25px; 
+    margin-bottom: 0;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+#modal-edition .champ-groupe { margin-bottom: 12px; }
+#modal-edition textarea { height: 55px; min-height: 55px; resize: none; }
+
+/* =========================================================================
+   Alertes Applicatives Animées
+   ========================================================================= */
+.overlay-alerte {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(17, 24, 39, 0.85); z-index: 10000; 
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; animation: fadeInAlerte 0.25s ease-out forwards;
 }
 
 .boite-alerte {
-    background: var(--blanc);
-    padding: 35px 30px;
-    border-radius: 20px;
+    background: var(--blanc); padding: 35px 30px; border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    max-width: 440px;
-    width: 90%;
-    text-align: center;
-    transform: scale(0.6) translateY(30px);
-    opacity: 0;
-    /* Effet "élastique" d'entrée */
+    max-width: 440px; width: 90%; text-align: center;
+    transform: scale(0.6) translateY(30px); opacity: 0;
     animation: zoomInAlerte 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.icone-alerte {
-    font-size: 60px;
-    margin-bottom: 15px;
-    display: inline-block;
-}
+.icone-alerte { font-size: 60px; margin-bottom: 15px; display: inline-block; }
+.boite-alerte h3 { margin: 0 0 12px 0; font-size: 24px; font-weight: 700; }
+.boite-alerte p { color: var(--texte-clair); font-size: 16px; line-height: 1.6; margin: 0 0 25px 0; }
 
-.boite-alerte h3 {
-    margin: 0 0 12px 0;
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.boite-alerte p {
-    color: var(--texte-clair);
-    font-size: 16px;
-    line-height: 1.6;
-    margin: 0 0 25px 0;
-}
-
-/* Adaptations selon le type de message */
 .boite-alerte.succes h3 { color: #10B981; }
 .boite-alerte.erreur h3 { color: #EF4444; }
 .boite-alerte.info h3 { color: #3B82F6; }
 
 .btn-alerte {
-    background-color: var(--bleu-primaire);
-    color: var(--blanc);
-    border: none;
-    padding: 12px 35px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 6px -1px rgba(26, 86, 219, 0.2);
-    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    background-color: var(--bleu-primaire); color: var(--blanc);
+    border: none; padding: 12px 35px; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
 }
 
-.btn-alerte:hover {
-    background-color: var(--bleu-secondaire);
-    box-shadow: 0 10px 15px -3px rgba(26, 86, 219, 0.3);
+.btn-alerte:hover { background-color: var(--bleu-secondaire); }
+.overlay-alerte.fermeture { animation: fadeOutAlerte 0.2s ease-in forwards; }
+.overlay-alerte.fermeture .boite-alerte { animation: zoomOutAlerte 0.2s ease-in forwards; }
+
+@keyframes fadeInAlerte { to { opacity: 1; } }
+@keyframes zoomInAlerte { to { transform: scale(1) translateY(0); opacity: 1; } }
+@keyframes fadeOutAlerte { to { opacity: 0; } }
+@keyframes zoomOutAlerte { to { transform: scale(0.85) translateY(15px); opacity: 0; } }
+
+/* =========================================================================
+   Zone Médicale & Sécurité Anti-Débordement Note Longue
+   ========================================================================= */
+.zone-medicale {
+    font-size: 14px;
+    color: #374151;
+    background: #F3F4F6;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    overflow-wrap: break-word;  
+    word-break: break-word;      
 }
 
-.btn-alerte:active {
-    transform: scale(0.96);
+/* Badges colorés de Sûreté */
+.badge-paye { background-color: #D1FAE5; color: #065F46; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+.badge-non-paye { background-color: #FEE2E2; color: #991B1B; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+.badge-controle-oui { background-color: #FEF3C7; color: #92400E; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; border: 1px solid #F59E0B; }
+.badge-controle-non { background-color: #E5E7EB; color: #374151; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+
+/* Grille pour les 4 paramètres vitaux numériques */
+.grille-vitals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
 }
 
-/* Animations de sortie lors de la fermeture */
-.overlay-alerte.fermeture {
-    animation: fadeOutAlerte 0.2s ease-in forwards;
-}
+.grille-vitals .champ-groupe { margin-bottom: 0px; }
+.grille-vitals label { font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; color: var(--texte-clair); margin-bottom: 4px; }
+.grille-vitals input { padding: 8px 10px; font-size: 13px; font-weight: 700; text-align: center; }
 
-.overlay-alerte.fermeture .boite-alerte {
-    animation: zoomOutAlerte 0.2s ease-in forwards;
-}
-
-@keyframes fadeInAlerte {
-    to { opacity: 1; }
-}
-
-@keyframes zoomInAlerte {
-    to {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOutAlerte {
-    to { opacity: 0; }
-}
-
-@keyframes zoomOutAlerte {
-    to {
-        transform: scale(0.85) translateY(15px);
-        opacity: 0;
-    }
+@media (max-width: 768px) {
+    .en-tete { flex-direction: column; gap: 15px; }
+    .barre-recherche-globale { max-width: 100%; margin: 0; width: 100%; }
+    .grille-2 { grid-template-columns: 1fr; gap: 0; }
 }
