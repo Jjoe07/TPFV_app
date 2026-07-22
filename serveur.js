@@ -1,6 +1,6 @@
 // =========================================================================
 // FICHIER : serveur.js
-// Rôle : Serveur Backend, API REST, Gestion SQLite & Sécurité anti-doublon
+// Rôle : Serveur Backend Express, Base de données SQLite3 et API REST
 // =========================================================================
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const db = new sqlite3.Database('clinique.db');
 
-// --- 1. CONFIGURATION INITIALE DE LA BASE DE DONNÉES ---
+// --- 1. INITIALISATION DE LA BASE DE DONNÉES ---
 db.run(`CREATE TABLE IF NOT EXISTS Utilisateurs (
     role TEXT PRIMARY KEY,
     mot_de_passe TEXT NOT NULL
@@ -53,7 +53,7 @@ db.run(`CREATE TABLE IF NOT EXISTS Inventaire (
     description TEXT
 )`);
 
-// --- 2. GESTION DES SESSIONS & SÉCURITÉ ---
+// --- 2. ROUTES D'AUTHENTIFICATION ---
 app.post('/api/login', (req, res) => {
     try {
         const { role, mot_de_passe } = req.body;
@@ -101,10 +101,11 @@ app.put('/api/admin-password', (req, res) => {
     }
 });
 
-// --- 3. GESTION DES DOSSIERS PATIENTS ---
+// --- 3. ROUTES DES PATIENTS (TRI ALPHABÉTIQUE) ---
 app.get('/api/patients', (req, res) => {
     try {
-        db.all("SELECT * FROM Patients ORDER BY id DESC", [], (err, lignes) => {
+        // Tri par ordre alphabétique (A -> Z)
+        db.all("SELECT * FROM Patients ORDER BY nom_complet ASC", [], (err, lignes) => {
             if (err) return res.status(500).json({ erreur: err.message });
             res.json(lignes);
         });
@@ -116,18 +117,15 @@ app.get('/api/patients', (req, res) => {
 app.post('/api/patients', (req, res) => {
     try {
         const { nom_complet, date_entree, date_naissance, sexe, telephone, adresse, consultation_statut, besoin_controle, parametres, notes } = req.body; 
-        
         if (!nom_complet || !nom_complet.trim() || !telephone || !telephone.trim()) {
             return res.status(400).json({ erreur: "Le nom complet et le numéro de téléphone sont obligatoires." });
         }
-
         db.get(
             "SELECT * FROM Patients WHERE telephone = ? OR (nom_complet = ? AND date_naissance = ?)", 
             [telephone.trim(), nom_complet.trim(), date_naissance], 
             (err, patientExiste) => {
                 try {
                     if (err) return res.status(500).json({ erreur: err.message });
-                    
                     if (patientExiste) {
                         if (patientExiste.telephone === telephone.trim()) {
                             return res.status(400).json({ erreur: `Le numéro de téléphone (${telephone}) appartient déjà au patient : ${patientExiste.nom_complet}.` });
@@ -136,122 +134,87 @@ app.post('/api/patients', (req, res) => {
                             return res.status(400).json({ erreur: `Un dossier existe déjà pour ${nom_complet} né(e) le ${date_naissance.split('-').reverse().join('/')}.` });
                         }
                     }
-
                     let dateFormatee = "00000000";
                     if (date_entree && date_entree.includes('-')) {
                         const parties = date_entree.split('-');
-                        if (parties.length === 3) {
-                            dateFormatee = `${parties[2]}${parties[1]}${parties[0]}`;
-                        }
+                        if (parties.length === 3) dateFormatee = `${parties[2]}${parties[1]}${parties[0]}`;
                     }
-
                     db.get("SELECT COUNT(*) as nombre FROM Patients WHERE date_entree = ?", [date_entree], (err, resultat) => {
                         try {
                             if (err) return res.status(500).json({ erreur: err.message });
                             const count = (resultat && resultat.nombre) ? resultat.nombre : 0;
                             const numero = (count + 1).toString().padStart(3, '0');
                             const code_patient = `${dateFormatee}${numero}`;
-
                             const requete = `INSERT INTO Patients (code_patient, nom_complet, date_entree, date_naissance, sexe, telephone, adresse, consultation_statut, besoin_controle, parametres, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                             db.run(requete, [code_patient, nom_complet.trim(), date_entree, date_naissance, sexe, telephone.trim(), adresse, consultation_statut || 'Non payé', besoin_controle || 'Non', parametres, notes], function(err) {
                                 try {
                                     if (err) return res.status(400).json({ erreur: err.message });
                                     res.json({ id: this.lastID, message: "Dossier patient créé avec succès !" });
-                                } catch (innerErr) {
-                                    res.status(500).json({ erreur: "Erreur de réponse: " + innerErr.message });
-                                }
+                                } catch (innerErr) { res.status(500).json({ erreur: innerErr.message }); }
                             });
-                        } catch (innerErr) {
-                            res.status(500).json({ erreur: "Erreur de calcul du code: " + innerErr.message });
-                        }
+                        } catch (innerErr) { res.status(500).json({ erreur: innerErr.message }); }
                     });
-                } catch (innerErr) {
-                    res.status(500).json({ erreur: "Erreur de doublon: " + innerErr.message });
-                }
+                } catch (innerErr) { res.status(500).json({ erreur: innerErr.message }); }
             }
         );
-    } catch (error) {
-        res.status(500).json({ erreur: "Erreur globale: " + error.message });
-    }
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
 app.put('/api/patients/:id', (req, res) => {
     try {
         const idPatient = req.params.id;
         const { nom_complet, date_entree, date_naissance, sexe, telephone, adresse, consultation_statut, besoin_controle, parametres, notes } = req.body; 
-        
         if (!nom_complet || !nom_complet.trim() || !telephone || !telephone.trim()) {
             return res.status(400).json({ erreur: "Le nom complet et le numéro de téléphone sont obligatoires." });
         }
-
         db.get(
             "SELECT * FROM Patients WHERE (telephone = ? OR (nom_complet = ? AND date_naissance = ?)) AND id != ?", 
             [telephone.trim(), nom_complet.trim(), date_naissance, idPatient], 
             (err, patientExiste) => {
                 try {
                     if (err) return res.status(500).json({ erreur: err.message });
-
                     if (patientExiste) {
-                        if (patientExiste.telephone === telephone.trim()) {
-                            return res.status(400).json({ erreur: `Ce numéro de téléphone (${telephone}) est déjà enregistré sur la fiche de : ${patientExiste.nom_complet}.` });
-                        }
-                        if (date_naissance && patientExiste.nom_complet === nom_complet.trim() && patientExiste.date_naissance === date_naissance) {
-                            return res.status(400).json({ erreur: `Un autre dossier identique existe déjà pour ${nom_complet} né(e) le ${date_naissance.split('-').reverse().join('/')}.` });
-                        }
+                        if (patientExiste.telephone === telephone.trim()) return res.status(400).json({ erreur: `Ce numéro de téléphone (${telephone}) est déjà enregistré sur un autre dossier.` });
+                        if (date_naissance && patientExiste.nom_complet === nom_complet.trim() && patientExiste.date_naissance === date_naissance) return res.status(400).json({ erreur: `Un autre dossier identique existe déjà.` });
                     }
-
                     const requete = `UPDATE Patients SET nom_complet = ?, date_entree = ?, date_naissance = ?, sexe = ?, telephone = ?, adresse = ?, consultation_statut = ?, besoin_controle = ?, parametres = ?, notes = ? WHERE id = ?`;
                     db.run(requete, [nom_complet.trim(), date_entree, date_naissance, sexe, telephone.trim(), adresse, consultation_statut, besoin_controle, parametres, notes, idPatient], function(err) {
-                        try {
-                            if (err) return res.status(500).json({ erreur: err.message });
-                            res.json({ message: "Dossier patient mis à jour avec succès !" });
-                        } catch(e) { res.status(500).json({ erreur: e.message }); }
+                        if (err) return res.status(500).json({ erreur: err.message });
+                        res.json({ message: "Dossier patient mis à jour avec succès !" });
                     });
                 } catch(e) { res.status(500).json({ erreur: e.message }); }
             }
         );
-    } catch (error) {
-        res.status(500).json({ erreur: "Erreur interne: " + error.message });
-    }
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
 app.delete('/api/patients/:id', (req, res) => {
     try {
-        const idPatient = req.params.id;
-        db.run("DELETE FROM Patients WHERE id = ?", [idPatient], function(err) {
+        db.run("DELETE FROM Patients WHERE id = ?", [req.params.id], function(err) {
             if (err) return res.status(500).json({ erreur: err.message });
             res.json({ message: "Dossier patient supprimé !" });
         });
-    } catch (error) {
-        res.status(500).json({ erreur: "Erreur interne: " + error.message });
-    }
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
-// --- 4. GESTION DE L'INVENTAIRE ---
+// --- 4. ROUTES DE L'INVENTAIRE ---
 app.get('/api/inventaire', (req, res) => {
     try {
         db.all("SELECT * FROM Inventaire ORDER BY nom_medicament ASC", [], (err, lignes) => {
             if (err) return res.status(500).json({ erreur: err.message });
             res.json(lignes);
         });
-    } catch (error) {
-        res.status(500).json({ erreur: "Erreur interne: " + error.message });
-    }
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
 app.post('/api/inventaire', (req, res) => {
     try {
         const { nom_medicament, quantite, description } = req.body;
-        const requete = `INSERT INTO Inventaire (nom_medicament, quantite, description) VALUES (?, ?, ?)`;
-        db.run(requete, [nom_medicament, quantite, description], function(err) {
+        db.run(`INSERT INTO Inventaire (nom_medicament, quantite, description) VALUES (?, ?, ?)`, [nom_medicament, quantite, description], function(err) {
             if (err) return res.status(400).json({ erreur: err.message });
             res.json({ id: this.lastID, message: "Médicament ajouté !" });
         });
-    } catch (error) {
-        res.status(500).json({ erreur: "Erreur interne: " + error.message });
-    }
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Serveur en ligne sur le port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => { console.log(`Serveur en ligne sur le port ${PORT}`); });
