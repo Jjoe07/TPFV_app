@@ -1,11 +1,12 @@
 /* =========================================================================
-   1. PALETTE DE COULEURS MÉDICALE & HÔPITAL
+   1. CHARTE GRAPHIQUE & PALETTE TPFV (ANIMATIONS CSS CONSERVÉES)
    ========================================================================= */
 :root {
-    --bleu-primaire: #0284C7; /* Cyan / Bleu clinique */
+    --bleu-primaire: #0284C7; 
     --bleu-hover: #0369A1;
-    --vert-soin: #0D9488;    /* Émeraude / Teal Médical */
-    --fond-page: #F0F9FF;    /* Fond bleu d'eau très doux */
+    --vert-soin: #0D9488;    
+    --rouge-alerte: #DC2626;
+    --fond-page: #F0F9FF;    
     --blanc: #FFFFFF;
     --texte-sombre: #0F172A; 
     --texte-clair: #475569;
@@ -20,14 +21,7 @@ body.dark-theme {
     --bordure: #334155;
 }
 
-/* =========================================================================
-   2. RESET ET RÈGLES DE VISIBILITÉ STRICTES (CORRIGÉES)
-   ========================================================================= */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -37,314 +31,284 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* RÈGLE ABSOLUE : La classe cachée l'emporte TOUJOURS */
-.section-cachee {
-    display: none !important;
+.section-cachee { display: none !important; }
+.section-visible { display: block; }
+body.modal-ouvert { overflow: hidden !important; }
+
+/* ANIMATION D'APPARITION FLUIDE INTACTE */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.section-visible {
-    display: block;
-}
-
-body.modal-ouvert {
-    overflow: hidden !important;
+.animate-fade {
+    animation: fadeIn 0.25s ease-out forwards;
 }
 
 /* =========================================================================
-   3. ÉCRAN DE CONNEXION (GLASSMORPHISM)
+   2. ÉCRAN DE CONNEXION
    ========================================================================= */
 #ecran-connexion {
-    min-height: 100vh;
-    padding: 24px;
-    background-color: #0369A1; 
-    background-image: linear-gradient(rgba(3, 105, 161, 0.55), rgba(3, 105, 161, 0.55)), 
-                      url('logo.png');
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: contain;
-    background-attachment: fixed;
-    align-items: center;
-    justify-content: center;
+    min-height: 100vh; padding: 20px; background-color: #0369A1; 
+    background-image: linear-gradient(rgba(3, 105, 161, 0.55), rgba(3, 105, 161, 0.55)), url('logo.png');
+    background-repeat: no-repeat; background-position: center; background-size: contain;
+    background-attachment: fixed; align-items: center; justify-content: center;
 }
-
-#ecran-connexion.section-visible {
-    display: flex !important;
-}
+#ecran-connexion.section-visible { display: flex !important; }
 
 .carte-connexion {
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 40px 30px;
-    border-radius: 20px;
-    width: 100%;
-    max-width: 400px;
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px);
+    padding: 35px 25px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    text-align: center;
 }
 
-body.dark-theme .carte-connexion {
-    background: rgba(30, 41, 59, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.logo-connexion { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
 .logo-connexion h2 { color: var(--bleu-primaire); font-size: 24px; font-weight: 800; }
 .sous-titre-connexion { color: var(--texte-clair); font-size: 14px; margin-bottom: 25px; }
 
-.champ-groupe-connexion { display: flex; flex-direction: column; text-align: left; margin-bottom: 20px; }
+.champ-groupe-connexion { display: flex; flex-direction: column; text-align: left; margin-bottom: 18px; }
 .champ-groupe-connexion label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--texte-clair); margin-bottom: 6px; }
+.champ-groupe-connexion input, .champ-groupe-connexion select { width: 100%; padding: 12px 14px; border: 1px solid var(--bordure); border-radius: 12px; font-size: 14px; }
 
-.champ-groupe-connexion input, .champ-groupe-connexion select {
-    width: 100%; padding: 12px 16px; border: 1px solid var(--bordure); border-radius: 12px; font-size: 14px;
-    background-color: rgba(255, 255, 255, 0.9); color: #1E293B; outline: none; transition: all 0.2s ease;
-}
-
-.champ-groupe-connexion input:focus, .champ-groupe-connexion select:focus {
-    border-color: var(--bleu-primaire); background-color: #FFFFFF; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15);
-}
-
-.btn-connexion-unique {
-    background-color: var(--bleu-primaire); color: #FFFFFF; border: none; padding: 14px; border-radius: 12px;
-    font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px;
-    box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.25);
-}
+.btn-connexion-unique { background-color: var(--bleu-primaire); color: #FFF; border: none; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; }
 
 /* =========================================================================
-   4. EN-TÊTE HÔPITAL ET NAVIGATION
+   3. EN-TÊTE RESPONSIVE
    ========================================================================= */
 .en-tete {
-    background-color: var(--blanc);
-    padding: 12px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid var(--bordure);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    background-color: var(--blanc); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--bordure); position: sticky; top: 0; z-index: 100; gap: 12px;
 }
+.logo-container h1 { color: var(--bleu-primaire); font-size: 22px; font-weight: 800; white-space: nowrap; }
+.barre-recherche-globale { display: flex; gap: 8px; align-items: center; flex-grow: 1; max-width: 480px; margin: 0 10px; }
+.select-header, .input-header { padding: 9px 12px; border: 1px solid var(--bordure); border-radius: 10px; font-size: 14px; background-color: var(--fond-page); color: var(--texte-sombre); }
+.input-header { flex-grow: 1; min-width: 120px; }
 
-.logo-container h1 { color: var(--bleu-primaire); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-.logo-container:hover h1 { transform: scale(1.02); }
-
-.barre-recherche-globale { display: flex; gap: 8px; align-items: center; flex-grow: 1; max-width: 480px; margin: 0 20px; }
-.select-header, .input-header { 
-    padding: 9px 14px; 
-    border: 1px solid var(--bordure); 
-    border-radius: 10px; 
-    font-size: 14px; 
-    background-color: var(--fond-page); 
-    color: var(--texte-sombre); 
-}
-.input-header { flex-grow: 1; border-color: #BAE6FD; }
-.input-header:focus { border-color: var(--bleu-primaire); background-color: #FFFFFF; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
-
-.onglets { display: flex; gap: 6px; }
-.onglet { background-color: transparent; color: var(--texte-clair); border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.onglets { display: flex; gap: 6px; flex-wrap: wrap; }
+.onglet { background: transparent; color: var(--texte-clair); border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
 .onglet.actif { background-color: #E0F2FE; color: var(--bleu-primaire); }
 
 /* =========================================================================
-   5. DISPOSITION FLEXBOX (APPLIQUÉE UNIQUEMENT SI VISIBLE)
+   4. STRUCTURE PRINCIPALE
    ========================================================================= */
-.conteneur {
-    max-width: 1240px !important;
-    margin: 24px auto !important;
-    padding: 0 20px !important;
-}
+.conteneur { max-width: 1240px !important; margin: 20px auto !important; padding: 0 16px !important; }
+.conteneur-layout-sidebar.section-visible { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 20px !important; width: 100% !important; }
 
-/* La règle Flexbox ne s'active que si la section possède la classe section-visible */
-.conteneur-layout-sidebar.section-visible {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-    gap: 24px !important;
-    width: 100% !important;
-}
-
-.barre-laterale-gauche {
-    width: 250px !important;
-    flex-shrink: 0 !important;
-    position: sticky !important;
-    top: 90px !important;
-    align-self: flex-start !important;
-    z-index: 50 !important;
-}
-
-.menu-sidebar {
-    background: var(--blanc) !important;
-    padding: 16px !important;
-    border-radius: 14px !important;
-    border: 1px solid var(--bordure) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04) !important;
-}
-
-.titre-menu-sidebar {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--bleu-primaire);
-    margin-bottom: 6px;
-    padding-left: 8px;
-}
-
-.btn-sidebar {
-    width: 100%;
-    text-align: left;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: none;
-    background: transparent;
-    color: var(--texte-clair);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-sidebar:hover { background-color: var(--fond-page); color: var(--bleu-primaire); }
+.barre-laterale-gauche { width: 240px !important; flex-shrink: 0 !important; position: sticky !important; top: 85px !important; z-index: 50 !important; }
+.menu-sidebar { background: var(--blanc) !important; padding: 16px !important; border-radius: 14px !important; border: 1px solid var(--bordure) !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+.titre-menu-sidebar { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--bleu-primaire); margin-bottom: 4px; }
+.btn-sidebar { width: 100%; text-align: left; padding: 12px; border-radius: 10px; border: none; background: transparent; color: var(--texte-clair); font-weight: 600; font-size: 13.5px; cursor: pointer; }
 .btn-sidebar.actif { background-color: #E0F2FE; color: var(--bleu-primaire); border-left: 4px solid var(--bleu-primaire); }
 
-body.dark-theme .btn-sidebar.actif { background-color: #0369A1; color: #FFFFFF; border-left: 4px solid #38BDF8; }
+.zone-contenu-droite { flex: 1 !important; min-width: 0 !important; }
 
-.zone-contenu-droite {
-    flex: 1 !important;
-    min-width: 0 !important;
+/* =========================================================================
+   5. DASHBOARD KPI & TABLEAU INVENTAIRE
+   ========================================================================= */
+.kpi-bandeau {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.carte-kpi {
+    background: var(--blanc);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--bordure);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icone-kpi { font-size: 28px; }
+.valeur-kpi { font-size: 20px; font-weight: 800; color: var(--bleu-primaire); }
+.carte-kpi.vert .valeur-kpi { color: var(--vert-soin); }
+.carte-kpi.rouge .valeur-kpi { color: #DC2626; }
+.carte-kpi.orange .valeur-kpi { color: #D97706; }
+.label-kpi { font-size: 12px; color: var(--texte-clair); font-weight: 600; }
+
+.barre-outils-inventaire {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.recherche-inventaire-bloc {
+    display: flex;
+    gap: 8px;
+    flex-grow: 1;
+    max-width: 600px;
+}
+
+.recherche-inventaire-bloc input, .recherche-inventaire-bloc select {
+    padding: 10px 14px;
+    font-size: 13.5px;
+}
+
+.boutons-actions-inventaire {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-action-inv {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    color: white;
+}
+.btn-action-inv.vert { background-color: var(--vert-soin); }
+.btn-action-inv.bleu { background-color: var(--bleu-primaire); }
+
+.conteneur-tableau-fluide {
+    overflow-x: auto;
+    background: var(--blanc);
+    border-radius: 14px;
+    border: 1px solid var(--bordure);
+}
+
+.tableau-inventaire {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 800px;
+}
+
+.tableau-inventaire th {
+    background-color: #F0F9FF;
+    color: var(--bleu-primaire);
+    padding: 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    border-bottom: 2px solid var(--bordure);
+}
+
+body.dark-theme .tableau-inventaire th { background-color: #1E293B; }
+
+.tableau-inventaire td {
+    padding: 12px;
+    border-bottom: 1px solid var(--bordure);
+    vertical-align: middle;
+}
+
+.tableau-inventaire tr:hover { background-color: rgba(240, 249, 255, 0.5); }
+
+/* BADGES DES RÉSULTATS DE STOCK */
+.badge-stock-normal { background: #CCFBF1; color: #0F766E; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+.badge-stock-alerte { background: #FEF3C7; color: #D97706; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+.badge-stock-rupture { background: #FEE2E2; color: #B91C1C; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+
+.badge-dp-ok { background: #E0F2FE; color: #0369A1; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-dp-alerte { background: #FEF3C7; color: #B45309; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.badge-dp-expire { background: #FEE2E2; color: #991B1B; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+
+.btn-mouv {
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    margin-right: 3px;
+}
+.btn-mouv.vert { background-color: var(--vert-soin); }
+.btn-mouv.rouge { background-color: #DC2626; }
+
+.btn-inv-icon {
+    background: transparent;
+    border: 1px solid var(--bordure);
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 /* =========================================================================
-   6. CARTES, FORMULAIRES & LISTES
+   6. CARTE, FORMULAIRES & PATIENTS
    ========================================================================= */
-.carte {
-    background: var(--blanc);
-    padding: 24px;
-    border-radius: 14px;
-    margin-bottom: 24px;
+.carte { background: var(--blanc); padding: 20px; border-radius: 14px; margin-bottom: 20px; border: 1px solid var(--bordure); }
+.carte.transparent { background: transparent; border: none; padding: 0; }
+
+.section-form-bloc {
+    background: rgba(240, 249, 255, 0.4);
     border: 1px solid var(--bordure);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
 }
 
-.carte.transparent { background: transparent; border: none; padding: 0; box-shadow: none; }
-.carte h2 { color: var(--texte-sombre); font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-
-.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.champ-groupe { display: flex; flex-direction: column; margin-bottom: 16px; }
-.champ-groupe label { font-size: 13px; font-weight: 600; color: var(--texte-clair); margin-bottom: 6px; }
-
-input, select, textarea {
-    width: 100%; padding: 10px 14px; border: 1px solid var(--bordure); border-radius: 8px;
-    font-size: 14px; background-color: #FFFFFF; color: var(--texte-sombre);
+.titre-bloc-form {
+    font-size: 14px; font-weight: 700; color: var(--bleu-primaire); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--bordure);
 }
+.titre-bloc-form.rouge { color: #DC2626; border-color: #FCA5A5; }
+.titre-bloc-form.vert { color: #0D9488; border-color: #99F6E4; }
+.titre-bloc-form.bleu { color: #0284C7; border-color: #BAE6FD; }
 
-body.dark-theme input, body.dark-theme select, body.dark-theme textarea { background-color: #111827; }
+.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.champ-groupe { display: flex; flex-direction: column; margin-bottom: 12px; }
+.champ-groupe label { font-size: 12.5px; font-weight: 600; color: var(--texte-clair); margin-bottom: 4px; }
 
-.btn-principal {
-    background-color: var(--bleu-primaire); color: #FFFFFF; border: none; padding: 12px;
-    border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%;
-}
+input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--bordure); border-radius: 8px; font-size: 14px; background-color: #FFFFFF; color: var(--texte-sombre); }
+
+.btn-principal { background-color: var(--bleu-primaire); color: #FFFFFF; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%; }
 
 .liste-donnees { list-style-type: none; display: flex; flex-direction: column; gap: 14px; }
-.liste-donnees li { 
-    background: var(--blanc); 
-    padding: 22px; 
-    border: 1px solid var(--bordure); 
-    border-radius: 14px; 
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.pagination-conteneur { display: flex; justify-content: space-between; align-items: center; background-color: var(--blanc); padding: 12px 20px; border-radius: 10px; border: 1px solid var(--bordure); margin-top: 16px; }
-.btn-page { background-color: var(--blanc); border: 1px solid var(--bordure); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
-
-/* =========================================================================
-   7. MODALE DE MODIFICATION (SCROLLBAR INTERNE)
-   ========================================================================= */
-#modal-edition {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(4px);
-    z-index: 1000; display: none; align-items: center; justify-content: center;
-}
-
-#modal-edition .carte {
-    width: 90%; max-width: 560px; max-height: 85vh !important;
-    padding: 24px; margin-bottom: 0; border-radius: 16px;
-    display: flex !important; flex-direction: column !important; overflow: hidden !important;
-}
-
-#modal-edition form {
-    overflow-y: auto !important; padding-right: 10px !important; flex: 1 1 auto !important;
-}
-
-#modal-edition form::-webkit-scrollbar { width: 7px; }
-#modal-edition form::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 8px; }
-#modal-edition form::-webkit-scrollbar-thumb { background-color: var(--vert-soin); border-radius: 8px; }
-
-/* =========================================================================
-   8. POPUPS D'ALERTES ET BADGES SOINS
-   ========================================================================= */
-.overlay-alerte {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(15, 23, 42, 0.5) !important;
-    backdrop-filter: blur(4px) !important;
-    z-index: 99999 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.boite-alerte {
-    background: #FFFFFF !important;
-    padding: 30px !important;
-    border-radius: 16px !important;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2) !important;
-    max-width: 400px !important;
-    width: 90% !important;
-    text-align: center !important;
-}
-
-body.dark-theme .boite-alerte { background: #1E293B !important; color: #FFFFFF !important; border: 1px solid var(--bordure) !important; }
-.icone-alerte { font-size: 45px !important; margin-bottom: 12px !important; display: block !important; }
-.boite-alerte h3 { margin: 0 0 8px 0 !important; font-size: 20px !important; font-weight: 700; color: var(--texte-sombre) !important; }
-.boite-alerte p { color: var(--texte-clair) !important; font-size: 14px !important; line-height: 1.5 !important; margin: 0 0 20px 0 !important; }
-
-.btn-alerte { 
-    background-color: var(--bleu-primaire) !important; 
-    color: #FFFFFF !important; 
-    border: none !important; 
-    padding: 10px 30px !important; 
-    border-radius: 8px !important; 
-    font-size: 14px !important; 
-    font-weight: 600 !important; 
-    cursor: pointer !important; 
-}
+.liste-donnees li { background: var(--blanc); padding: 18px; border: 1px solid var(--bordure); border-radius: 14px; }
 
 .zone-medicale { font-size: 13px; background: var(--fond-page); padding: 12px; border-radius: 10px; margin-top: 10px; border: 1px solid var(--bordure); }
-.badge-paye { background-color: #CCFBF1; color: #0F766E; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
-.badge-non-paye { background-color: #FEE2E2; color: #B91C1C; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
 
-.badge-controle-oui { background-color: #FEF3C7; color: #D97706; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; border: 1px solid #FCD34D; }
-.badge-controle-non { background-color: #E0F2FE; color: #0369A1; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; border: 1px solid #BAE6FD; }
+.badge-paye { background-color: #CCFBF1; color: #0F766E; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+.badge-non-paye { background-color: #FEE2E2; color: #B91C1C; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+.badge-controle-oui { background-color: #FEF3C7; color: #D97706; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; border: 1px solid #FCD34D; }
+.badge-controle-non { background-color: #E0F2FE; color: #0369A1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; border: 1px solid #BAE6FD; }
 
-body.dark-theme .badge-controle-non { background-color: #1E293B; color: #38BDF8; border-color: #334155; }
+.badge-allergie { background-color: #FEE2E2; color: #DC2626; padding: 5px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; display: inline-block; border: 1px solid #FCA5A5; }
 
-.grille-vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 8px; }
+.grille-vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 6px; }
 .grille-vitals label { font-size: 10px !important; color: var(--texte-clair); }
-.grille-vitals input { padding: 6px 10px; font-size: 13px; text-align: center; }
+.grille-vitals input { padding: 6px 8px; font-size: 13px; text-align: center; }
 
 /* =========================================================================
-   9. RESPONSIVE DESIGN (MOBILES ET TABLETTES)
+   7. MODALE & OVERLAY DE SÉCURITÉ
    ========================================================================= */
+#modal-inventaire, #modal-mouvement-stock {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 1000; overflow-y: auto;
+}
+
+#modal-edition { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+#modal-edition .carte { width: 92%; max-width: 650px; max-height: 88vh !important; padding: 20px; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+#modal-edition form { overflow-y: auto !important; padding-right: 6px !important; flex: 1 1 auto !important; }
+
+.overlay-alerte { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(15, 23, 42, 0.5) !important; backdrop-filter: blur(4px) !important; z-index: 99999 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+.boite-alerte { background: #FFFFFF !important; padding: 25px !important; border-radius: 16px !important; max-width: 380px !important; width: 90% !important; text-align: center !important; }
+.btn-alerte { background-color: var(--bleu-primaire) !important; color: #FFFFFF !important; border: none !important; padding: 10px 25px !important; border-radius: 8px !important; font-weight: 600 !important; cursor: pointer !important; }
+
+/* =========================================================================
+   8. MEDIA QUERIES (RESPONSIVE MOBILES & TABLETTES)
+   ========================================================================= */
+@media (max-width: 992px) {
+    .en-tete { flex-wrap: wrap; padding: 10px 16px; }
+    .barre-recherche-globale { order: 3; width: 100%; max-width: 100%; margin: 6px 0 0 0; }
+}
+
 @media (max-width: 768px) {
-    .conteneur-layout-sidebar.section-visible { flex-direction: column !important; }
+    .conteneur-layout-sidebar.section-visible { flex-direction: column !important; gap: 14px !important; }
     .barre-laterale-gauche { width: 100% !important; position: static !important; }
-    .grille-2 { grid-template-columns: 1fr; }
+    .menu-sidebar { flex-direction: row !important; flex-wrap: wrap !important; padding: 10px !important; }
+    .grille-2 { grid-template-columns: 1fr !important; gap: 0; }
+    .recherche-inventaire-bloc { flex-direction: column; }
+    .boutons-actions-inventaire { width: 100%; justify-content: space-between; }
+    .btn-action-inv { flex: 1; text-align: center; }
+}
+
+@media (max-width: 480px) {
+    .btn-sidebar { flex: 1 1 100%; }
+    .onglets { width: 100%; justify-content: space-between; }
+    .onglet { padding: 6px 8px; font-size: 12px; }
 }
