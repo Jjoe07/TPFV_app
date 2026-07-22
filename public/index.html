@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CliniqueApp - Gestion centralisée</title>
+    
+    <link rel="icon" type="image/png" href="icone.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+
+    <!-- ÉCRAN DE CONNEXION -->
+    <div id="ecran-connexion" class="section-visible">
+        <div class="carte-connexion">
+            <div class="logo-connexion">
+                <span class="icone-logo-app">🏥</span>
+                <h2>CliniqueApp</h2>
+            </div>
+            <p class="sous-titre-connexion">Veuillez vous identifier</p>
+            
+            <form onsubmit="event.preventDefault(); seConnecter();">
+                <div class="champ-groupe-connexion">
+                    <label for="choix-role">Votre rôle</label>
+                    <select id="choix-role" required>
+                        <option value="agent">👨‍💼 Agent (Accueil / Saisie)</option>
+                        <option value="support">🛠️ Support (Consultation / Modification)</option>
+                        <option value="admin">🛡️ Administrateur (Complet)</option>
+                    </select>
+                </div>
+
+                <div class="champ-groupe-connexion">
+                    <label for="mot-de-passe">Mot de passe</label>
+                    <input type="password" id="mot-de-passe" placeholder="Entrez votre mot de passe..." required>
+                </div>
+                
+                <button type="submit" class="btn-connexion-unique">Accéder à l'application</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION PRINCIPALE -->
+    <div id="application-principale" class="section-cachee">
+        <header class="en-tete">
+            <div class="logo-container" onclick="location.reload()" title="Cliquer pour rafraîchir l'application" style="cursor: pointer;">
+                <h1>🏥 CliniqueApp</h1>
+            </div>
+            
+            <!-- BARRE DE RECHERCHE DYNAMIQUE -->
+            <div class="barre-recherche-globale">
+                <select id="filtre-recherche" class="select-header">
+                    <option value="tout">Partout...</option>
+                    <option value="nom">Nom complet</option>
+                    <option value="code">Code Patient</option>
+                    <option value="telephone">Téléphone</option>
+                </select>
+                <input type="text" id="champ-recherche" class="input-header" placeholder="🔍 Rechercher un patient en temps réel...">
+            </div>
+
+            <nav class="onglets">
+                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👤 Patients</button>
+                <button id="btn-inventaire" class="onglet" onclick="changerOnglet('inventaire')">💊 Inventaire</button>
+                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')" style="display: none;">⚙️ Paramètres</button>
+                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')" style="display: none;">🔐 Mon Compte</button>
+                <button id="btn-theme" class="onglet" onclick="basculerTheme()">🌙 Mode Sombre</button>
+                <button class="onglet" style="color: #EF4444; border-color: #EF4444;" onclick="seDeconnecter()">Déconnexion</button>
+            </nav>
+        </header>
+
+        <main class="conteneur">
+            
+            <div id="section-patients" class="section-visible animate-fade conteneur-layout-sidebar">
+                
+                <!-- SIDEBAR FIXE À GAUCHE -->
+                <aside class="barre-laterale-gauche">
+                    <div class="menu-sidebar">
+                        <span class="titre-menu-sidebar">MENU GESTION</span>
+                        <button id="btn-sous-liste" class="btn-sidebar actif" onclick="changerSousOngletPatients('liste')">
+                            📁 Dossiers Patients (<span id="total-dossiers-badge">0</span>)
+                        </button>
+                        <button id="btn-sous-form" class="btn-sidebar" onclick="changerSousOngletPatients('form')">
+                            ➕ Ajouter un Patient
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- CONTENU À DROITE -->
+                <div class="zone-contenu-droite">
+
+                    <!-- FORMULAIRE PATIENT -->
+                    <div id="zone-form-patient" class="section-cachee">
+                        <section class="carte">
+                            <h2>Nouveau Dossier Patient</h2>
+                            <form id="formPatient">
+                                <div class="champ-groupe">
+                                    <label for="nom_complet">Nom et Prénom</label>
+                                    <input type="text" id="nom_complet" placeholder="Ex: Jean Dupont" required>
+                                </div>
+                                <div class="grille-2">
+                                    <div class="champ-groupe"><label for="date_naissance">Date de naissance</label><input type="date" id="date_naissance" required></div>
+                                    <div class="champ-groupe"><label for="telephone">Téléphone</label><input type="tel" id="telephone" placeholder="Ex: +261 34 61 664 24" required></div>
+                                </div>
+                                <div class="champ-groupe"><label for="adresse">Adresse complète</label><input type="text" id="adresse" placeholder="Ex: Tanjombato, Antananarivo" required></div>
+                                <div class="grille-2">
+                                    <div class="champ-groupe"><label for="date_entree">Date d'entrée</label><input type="date" id="date_entree" required></div>
+                                    <div class="champ-groupe"><label for="sexe">Sexe</label><select id="sexe" required><option value="">Sélectionner...</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select></div>
+                                </div>
+                                <div class="grille-2">
+                                    <div class="champ-groupe"><label for="consultation_statut">Statut Consultation</label><select id="consultation_statut" required><option value="Non payé">🔴 Non payé</option><option value="Payé">🟢 Payé</option></select></div>
+                                    <div class="champ-groupe"><label for="besoin_controle">Contrôle requis ?</label><select id="besoin_controle" required><option value="Non">❌ Non</option><option value="Oui">⚠️ Oui</option></select></div>
+                                </div>
+                                <div id="champs-medicaux" style="display: none; width: 100%;">
+                                    <h3 style="margin-top: 15px; font-size: 15px; color: var(--bleu-primaire); border-bottom: 1px solid var(--bordure); padding-bottom: 5px;">📊 Paramètres Vitaux</h3>
+                                    <div class="grille-vitals">
+                                        <div class="champ-groupe"><label for="vit_temp">Température (°C)</label><input type="number" id="vit_temp" step="0.1" placeholder="37.0"></div>
+                                        <div class="champ-groupe"><label for="vit_poids">Poids (kg)</label><input type="number" id="vit_poids" step="0.1" placeholder="70"></div>
+                                        <div class="champ-groupe"><label for="vit_pouls">Pouls (bpm)</label><input type="number" id="vit_pouls" placeholder="75"></div>
+                                        <div class="champ-groupe"><label>Tension (mmHg)</label><div style="display: flex; gap: 5px;"><input type="number" id="vit_sys" placeholder="Sys" style="flex: 1;"><input type="number" id="vit_dia" placeholder="Dia" style="flex: 1;"></div></div>
+                                    </div>
+                                    <div class="champ-groupe" style="margin-top: 15px;"><label for="notes">Notes médicales</label><textarea id="notes" rows="3" placeholder="Saisir les observations..."></textarea></div>
+                                </div>
+                                <button type="submit" class="btn-principal" style="margin-top: 15px;">Enregistrer le dossier</button>
+                            </form>
+                        </section>
+                    </div>
+
+                    <!-- LISTE DOSSIERS -->
+                    <div id="zone-liste-patients" class="carte transparent section-visible">
+                        <h2>Liste des Dossiers</h2>
+                        <ul id="listePatients" class="liste-donnees"></ul>
+                        <div id="pagination-patients" class="pagination-conteneur"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- SECTION INVENTAIRE -->
+            <div id="section-inventaire" class="section-cachee animate-fade">
+                <section class="carte">
+                    <h2>Ajouter au Stock</h2>
+                    <form id="formInventaire">
+                        <div class="grille-2">
+                            <div class="champ-groupe"><label for="nom_medicament">Nom du produit</label><input type="text" id="nom_medicament" required></div>
+                            <div class="champ-groupe"><label for="quantite">Quantité</label><input type="number" id="quantite" required></div>
+                        </div>
+                        <div class="champ-groupe"><label for="description">Description</label><textarea id="description" rows="2"></textarea></div>
+                        <button type="submit" class="btn-principal">Ajouter au stock</button>
+                    </form>
+                </section>
+                <section class="carte transparent"><h2>Stock Actuel</h2><ul id="listeInventaire" class="liste-donnees"></ul></section>
+            </div>
+
+            <!-- SECTION PARAMÈTRES -->
+            <div id="section-parametres" class="section-cachee animate-fade">
+                <section class="carte">
+                    <h2>Sécurité de l'Équipe</h2>
+                    <form id="formResetMdpEquipe">
+                        <div class="grille-2">
+                            <div class="champ-groupe"><label for="role-a-modifier">Compte</label><select id="role-a-modifier" required><option value="agent">👨‍💼 Agent</option><option value="support">🛠️ Support</option></select></div>
+                            <div class="champ-groupe"><label for="nouveau-mdp-equipe">Nouveau mot de passe</label><input type="text" id="nouveau-mdp-equipe" required></div>
+                        </div>
+                        <button type="submit" class="btn-principal" style="background-color: #F59E0B;">Mettre à jour</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- SECTION MON COMPTE -->
+            <div id="section-compte" class="section-cachee animate-fade">
+                <section class="carte">
+                    <h2>Mon Compte Administrateur</h2>
+                    <form id="formResetMdpAdmin">
+                        <div class="grille-2">
+                            <div class="champ-groupe"><label for="ancien-mdp-admin">Ancien mot de passe</label><input type="password" id="ancien-mdp-admin" required></div>
+                            <div class="champ-groupe"><label for="nouveau-mdp-admin">Nouveau mot de passe</label><input type="password" id="nouveau-mdp-admin" required></div>
+                        </div>
+                        <button type="submit" class="btn-principal" style="background-color: #EF4444;">Modifier mon mot de passe</button>
+                    </form>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODALE DE MODIFICATION -->
+    <div id="modal-edition">
+        <div class="carte">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-weight: 700;">✏️ Modifier le dossier</h2>
+                <button onclick="fermerModalEdition()" style="background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+            </div>
+            <form id="formEditPatient">
+                <input type="hidden" id="edit_id">
+                <div class="champ-groupe"><label>Nom et Prénom</label><input type="text" id="edit_nom_complet" required></div>
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="edit_date_naissance" required></div>
+                    <div class="champ-groupe"><label>Téléphone</label><input type="tel" id="edit_telephone" required></div>
+                </div>
+                <div class="champ-groupe"><label>Adresse complète</label><input type="text" id="edit_adresse" required></div>
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Date d'entrée</label><input type="date" id="edit_date_entree" required></div>
+                    <div class="champ-groupe"><label>Sexe</label><select id="edit_sexe" required><option value="Homme">Homme</option><option value="Femme">Femme</option></select></div>
+                </div>
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Statut Consultation</label><select id="edit_consultation_statut" required><option value="Non payé">🔴 Non payé</option><option value="Payé">🟢 Payé</option></select></div>
+                    <div class="champ-groupe"><label>Contrôle requis ?</label><select id="edit_besoin_controle" required><option value="Non">❌ Non</option><option value="Oui">⚠️ Oui</option></select></div>
+                </div>
+                <h3 style="margin-top: 15px; font-size: 14px; color: var(--vert-soin); border-bottom: 1px solid var(--bordure); padding-bottom: 5px;">📊 Paramètres Vitaux</h3>
+                <div class="grille-vitals">
+                    <div class="champ-groupe"><label>Température (°C)</label><input type="number" id="edit_vit_temp" step="0.1"></div>
+                    <div class="champ-groupe"><label>Poids (kg)</label><input type="number" id="edit_vit_poids" step="0.1"></div>
+                    <div class="champ-groupe"><label>Pouls (bpm)</label><input type="number" id="edit_vit_pouls"></div>
+                    <div class="champ-groupe"><label>Tension (mmHg)</label><div style="display: flex; gap: 5px;"><input type="number" id="edit_vit_sys" placeholder="Sys" style="flex: 1;"><input type="number" id="edit_vit_dia" placeholder="Dia" style="flex: 1;"></div></div>
+                </div>
+                <div class="champ-groupe" style="margin-top: 10px;"><label>Notes médicales</label><textarea id="edit_notes" rows="2"></textarea></div>
+                <button type="submit" class="btn-principal" style="background-color: var(--vert-soin); margin-top: 15px;">Sauvegarder les modifications</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
