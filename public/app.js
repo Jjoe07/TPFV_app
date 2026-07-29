@@ -1,58 +1,37 @@
 // =========================================================================
-// FICHIER : app.js
-// Rôle : Client TPFV, Fiches A4 HD (1 Page A4 Intégrale), Dates en Lettres
+// FICHIER : public/app.js (Affichage par 5 & Tri Alphabétique de A à Z)
 // =========================================================================
-
-let tousLesPatients = []; 
-let patientsFiltresGlobaux = []; 
+let tousLesPatients = [];
+let patientsFiltresGlobaux = [];
 let pageActuelle = 1;
-const patientsParPage = 10; 
-let roleActuel = ''; 
+let roleActuel = '';
 
-// --- 1. THÈME & ALERTES POP-UP ---
-function basculerTheme() {
-    const body = document.body;
-    body.classList.toggle('dark-theme');
-    const estSombre = body.classList.contains('dark-theme');
-    localStorage.setItem('themeClinique', estSombre ? 'sombre' : 'clair');
-    const btn = document.getElementById('btn-theme');
-    if (btn) btn.innerText = estSombre ? '☀️ Mode Clair' : '🌙 Mode Sombre';
+// MODIFICATION : Affichage de 5 patients par page
+const patientsParPage = 5;
+
+// --- 1. UTILITIES & POPUP ALERTE ---
+function basculerTheme() { 
+    document.body.classList.toggle('dark-theme'); 
+    localStorage.setItem('themeClinique', document.body.classList.contains('dark-theme') ? 'sombre' : 'clair'); 
 }
 
 function afficherAlerte(titre, message, type = 'info') {
-    return new Promise((resolve) => {
-        const anciennesAlertes = document.querySelectorAll('.overlay-alerte');
-        anciennesAlertes.forEach(a => a.remove());
-
-        const overlay = document.createElement('div');
+    return new Promise(resolve => {
+        document.querySelectorAll('.overlay-alerte').forEach(a => a.remove());
+        const overlay = document.createElement('div'); 
         overlay.className = 'overlay-alerte';
         let icone = type === 'succes' ? '✅' : (type === 'erreur' ? '❌' : 'ℹ️');
-        
-        overlay.innerHTML = `
-            <div class="boite-alerte">
-                <span class="icone-alerte">${icone}</span>
-                <h3>${titre}</h3>
-                <p>${message}</p>
-                <button class="btn-alerte">D'accord</button>
-            </div>
-        `;
-        
-        document.body.appendChild(overlay);
-        const bouton = overlay.querySelector('.btn-alerte');
-        bouton.focus();
-        bouton.addEventListener('click', () => {
-            overlay.remove();
-            resolve();
-        });
+        overlay.innerHTML = `<div class="boite-alerte"><span style="font-size:30px;display:block;margin-bottom:8px;">${icone}</span><h3>${titre}</h3><p>${message}</p><button class="btn-alerte">D'accord</button></div>`;
+        document.body.appendChild(overlay); 
+        const btn = overlay.querySelector('.btn-alerte'); 
+        btn.focus(); 
+        btn.addEventListener('click', () => { overlay.remove(); resolve(); });
     });
 }
 
-// FORMATAGE DES DATES EN LETTRES (EX: 23 DÉCEMBRE 1999) SANS CALCUL D'ÂGE
 function formaterDateEnLettres(dateString) {
-    if (!dateString) return 'Non renseignée';
-    
+    if (!dateString || dateString.trim() === '') return 'Non renseignée';
     let year, month, day;
-
     if (dateString.includes('-')) {
         const parties = dateString.split('-');
         if (parties.length === 3) [year, month, day] = parties;
@@ -60,864 +39,440 @@ function formaterDateEnLettres(dateString) {
         const parties = dateString.split('/');
         if (parties.length === 3) [day, month, year] = parties;
     }
-
     if (!year || !month || !day) return dateString;
-
-    const moisLettres = [
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-    ];
-
-    const moisIndex = parseInt(month, 10) - 1;
-    if (moisIndex < 0 || moisIndex >= 12) return dateString;
-
-    const jourNumero = parseInt(day, 10).toString().padStart(2, '0');
-    const nomMois = moisLettres[moisIndex];
-
-    return `${jourNumero} ${nomMois} ${year}`;
+    const moisAbbreges = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
+    const indexMois = parseInt(month, 10) - 1;
+    if (indexMois >= 0 && indexMois < 12) {
+        return `${parseInt(day, 10).toString().padStart(2, '0')}${moisAbbreges[indexMois]} ${year}`;
+    }
+    return dateString;
 }
 
-function formaterDateEtAge(dateString) {
-    return formaterDateEnLettres(dateString);
+// --- 2. GESTION DYNAMIQUE DU RDV SPÉCIALISTE ---
+function gererAffichageRdvSpecialiste(selectId, blocId) {
+    const selectEl = document.getElementById(selectId);
+    const blocEl = document.getElementById(blocId);
+    if (selectEl && blocEl) {
+        const val = (selectEl.value || '').toLowerCase();
+        if (val.includes('rendez-vous') || val.includes('spécialiste') || val.includes('3')) {
+            blocEl.style.display = 'grid';
+            
+            const inputDateId = selectId === 'type_consultation' ? 'date_rdv_specialiste' : 'edit_date_rdv_specialiste';
+            const inputHeureId = selectId === 'type_consultation' ? 'heure_rdv_specialiste' : 'edit_heure_rdv_specialiste';
+            
+            const inputDate = document.getElementById(inputDateId);
+            const inputHeure = document.getElementById(inputHeureId);
+            
+            if (inputDate && !inputDate.value) {
+                inputDate.value = new Date().toISOString().slice(0, 10);
+            }
+            if (inputHeure && !inputHeure.value) {
+                inputHeure.value = "09:00";
+            }
+        } else {
+            blocEl.style.display = 'none';
+        }
+    }
 }
 
-// --- 2. GESTION DES RÔLES ET ACCÈS ---
+function obtenirServicesCoches(nomChamp) {
+    const checkboxes = document.querySelectorAll(`input[name="${nomChamp}"]:checked`);
+    return Array.from(checkboxes).map(cb => cb.value).join(', ');
+}
+
+function cocherServicesSpecifiques(nomChamp, valeursChaine) {
+    const listeValeurs = (valeursChaine || '').split(', ').map(s => s.trim());
+    document.querySelectorAll(`input[name="${nomChamp}"]`).forEach(cb => {
+        cb.checked = listeValeurs.includes(cb.value);
+    });
+}
+
+// --- 3. AUTHENTIFICATION & RÔLES ---
 function appliquerDroitsRole(role) {
     roleActuel = role;
-    
     const ecranConnexion = document.getElementById('ecran-connexion');
     const appPrincipale = document.getElementById('application-principale');
 
-    if (ecranConnexion) {
-        ecranConnexion.classList.remove('section-visible');
-        ecranConnexion.classList.add('section-cachee');
-    }
-
-    if (appPrincipale) {
-        appPrincipale.classList.remove('section-cachee');
-        appPrincipale.classList.add('section-visible', 'animate-fade');
-    }
+    if (ecranConnexion) ecranConnexion.classList.replace('section-visible', 'section-cachee');
+    if (appPrincipale) appPrincipale.classList.replace('section-cachee', 'section-visible');
     
-    const btnInventaire = document.getElementById('btn-inventaire');
-    const btnParametres = document.getElementById('btn-parametres');
-    const btnCompte = document.getElementById('btn-compte');
-    const champsMedicaux = document.getElementById('champs-medicaux'); 
-    const btnTheme = document.getElementById('btn-theme'); 
-    
-    if (roleActuel === 'agent' || roleActuel === 'support') {
-        if (btnInventaire) btnInventaire.style.display = 'none';
-        if (btnParametres) btnParametres.style.display = 'none';
-        if (btnCompte) btnCompte.style.display = 'none';
+    const els = { inv: document.getElementById('btn-inventaire'), par: document.getElementById('btn-parametres'), ctp: document.getElementById('btn-compte'), med: document.getElementById('champs-medicaux') };
+    if (role === 'agent' || role === 'support') { 
+        if(els.inv) els.inv.style.display='none'; if(els.par) els.par.style.display='none'; if(els.ctp) els.ctp.style.display='none'; 
         changerOnglet('patients'); 
-    } else if (roleActuel === 'admin') {
-        if (btnInventaire) btnInventaire.style.display = 'block';
-        if (btnParametres) btnParametres.style.display = 'block';
-        if (btnCompte) btnCompte.style.display = 'block';
+    } else { 
+        if(els.inv) els.inv.style.display='block'; if(els.par) els.par.style.display='block'; if(els.ctp) els.ctp.style.display='block'; 
     }
-    
-    if (roleActuel === 'agent') {
-        if (champsMedicaux) champsMedicaux.style.display = 'none';
-        if (btnTheme) btnTheme.style.display = 'none';
-        document.body.classList.remove('dark-theme');
-    } else {
-        if (champsMedicaux) champsMedicaux.style.display = 'block'; 
-        if (btnTheme) btnTheme.style.display = 'block';
-        const themeSauvegarde = localStorage.getItem('themeClinique');
-        if (themeSauvegarde === 'sombre') {
-            document.body.classList.add('dark-theme');
-            if (btnTheme) btnTheme.innerText = '☀️ Mode Clair';
-        } else {
-            document.body.classList.remove('dark-theme');
-            if (btnTheme) btnTheme.innerText = '🌙 Mode Sombre';
-        }
-    }
-    
     chargerPatients();
 }
 
 async function seConnecter() {
-    const roleSaisi = document.getElementById('choix-role').value;
-    const mdpSaisi = document.getElementById('mot-de-passe').value;
-    if (!mdpSaisi) return afficherAlerte("Champs requis", "Veuillez entrer votre mot de passe.", "info");
+    const role = document.getElementById('choix-role')?.value;
+    const mdp = document.getElementById('mot-de-passe')?.value;
+    if (!mdp) return afficherAlerte("Champ requis", "Veuillez entrer votre mot de passe.", "info");
+
     try {
-        const reponse = await fetch('/api/login', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ role: roleSaisi, mot_de_passe: mdpSaisi.trim() }) 
-        });
-        const data = await reponse.json();
-        if (!reponse.ok) {
-            return afficherAlerte("Accès refusé", data.erreur || "Mot de passe incorrect.", "erreur");
-        }
-        localStorage.setItem('sessionCliniqueRole', roleSaisi);
-        appliquerDroitsRole(roleSaisi);
+        const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ role, mot_de_passe: mdp }) });
+        const data = await res.json();
+        if (!res.ok) return afficherAlerte("Accès refusé", data.erreur || "Identifiants incorrects.", "erreur");
+        localStorage.setItem('sessionCliniqueRole', role); 
+        appliquerDroitsRole(role); 
         document.getElementById('mot-de-passe').value = '';
-    } catch (erreur) { 
-        afficherAlerte("Erreur réseau", "Impossible de joindre le serveur. Lancez `node serveur.js` dans le terminal.", "erreur"); 
-    }
+    } catch(e) { afficherAlerte("Erreur réseau", "Impossible de contacter le serveur local.", "erreur"); }
 }
 
-function seDeconnecter() {
+function seDeconnecter() { 
     roleActuel = ''; 
-    localStorage.removeItem('sessionCliniqueRole');
-    document.body.classList.remove('dark-theme'); 
-
-    const ecranConnexion = document.getElementById('ecran-connexion');
-    const appPrincipale = document.getElementById('application-principale');
-
-    if (appPrincipale) {
-        appPrincipale.classList.remove('section-visible');
-        appPrincipale.classList.add('section-cachee');
-    }
-
-    if (ecranConnexion) {
-        ecranConnexion.classList.remove('section-cachee');
-        ecranConnexion.classList.add('section-visible');
-    }
+    localStorage.removeItem('sessionCliniqueRole'); 
+    document.getElementById('application-principale').classList.replace('section-visible','section-cachee'); 
+    document.getElementById('ecran-connexion').classList.replace('section-cachee','section-visible'); 
 }
 
-// --- 3. RECHERCHE TEMPS RÉEL PATIENTS ---
-function filtrerPatients() {
-    const me = document.getElementById('champ-recherche');
-    const fe = document.getElementById('filtre-recherche');
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('champ-recherche')?.addEventListener('input', filtrerPatients);
+    document.getElementById('filtre-recherche')?.addEventListener('change', filtrerPatients);
     
-    const terme = me ? me.value.toLowerCase().trim() : '';
-    const filtre = fe ? fe.value : 'tout';
+    const sess = localStorage.getItem('sessionCliniqueRole');
+    if (sess) appliquerDroitsRole(sess);
+});
 
-    patientsFiltresGlobaux = tousLesPatients.filter(p => {
-        const nom = (p.nom_complet || '').toLowerCase();
-        const code = (p.code_patient || '').toLowerCase();
-        const tel = (p.telephone || '').toLowerCase();
+// --- 4. NAVIGATION & RECHERCHE AVEC TRI ALPHABÉTIQUE ---
+function filtrerPatients() {
+    const term = (document.getElementById('champ-recherche')?.value || '').toLowerCase().trim();
+    const filtre = document.getElementById('filtre-recherche')?.value || 'tout';
+    
+    // Filtrage et Tri Alphabétique (A à Z)
+    patientsFiltresGlobaux = tousLesPatients
+        .filter(p => {
+            const n=(p.nom_complet||'').toLowerCase(), c=(p.code_patient||'').toLowerCase(), t=(p.telephone||'').toLowerCase();
+            if(!term) return true;
+            if(filtre==='nom') return n.includes(term); 
+            if(filtre==='code') return c.includes(term); 
+            if(filtre==='telephone') return t.includes(term);
+            return n.includes(term) || c.includes(term) || t.includes(term);
+        })
+        .sort((a, b) => (a.nom_complet || '').localeCompare(b.nom_complet || '', 'fr', { sensitivity: 'base' }));
 
-        if (!terme) return true;
-        if (filtre === 'nom') return nom.includes(terme);
-        if (filtre === 'code') return code.includes(terme);
-        if (filtre === 'telephone') return tel.includes(terme);
-        return nom.includes(terme) || code.includes(terme) || tel.includes(terme);
-    });
-
-    pageActuelle = 1;
+    pageActuelle = 1; 
     afficherPatients(patientsFiltresGlobaux);
 }
 
-// --- 4. INITIALISATION DES ÉCOUTEURS ---
-window.addEventListener('DOMContentLoaded', () => {
-    const champ = document.getElementById('champ-recherche');
-    const filtre = document.getElementById('filtre-recherche');
-    if (champ) champ.addEventListener('input', filtrerPatients);
-    if (filtre) filtre.addEventListener('change', filtrerPatients);
-
-    // RÉINITIALISATION MOT DE PASSE ÉQUIPE
-    const formResetEquipe = document.getElementById('formResetMdpEquipe');
-    if (formResetEquipe) {
-        formResetEquipe.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const roleAModifier = document.getElementById('role-a-modifier').value;
-            const nouveauMdp = document.getElementById('nouveau-mdp-equipe').value;
-
-            if (!nouveauMdp || !nouveauMdp.trim()) {
-                return afficherAlerte("Champ requis", "Veuillez saisir un mot de passe.", "info");
-            }
-
-            try {
-                const reponse = await fetch('/api/reset-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ role_a_modifier: roleAModifier, nouveau_mot_de_passe: nouveauMdp.trim() })
-                });
-
-                let data = {};
-                try { data = await reponse.json(); } catch (jsonErr) { data = { erreur: "Redémarrez le serveur Node.js." }; }
-
-                if (reponse.ok) {
-                    await afficherAlerte("Succès", data.message || `Le mot de passe de ${roleAModifier.toUpperCase()} a été mis à jour !`, "succes");
-                    formResetEquipe.reset();
-                } else {
-                    await afficherAlerte("Erreur", data.erreur || "Impossible de modifier le mot de passe.", "erreur");
-                }
-            } catch (erreur) {
-                await afficherAlerte("Erreur réseau", "Impossible de contacter le serveur.", "erreur");
-            }
-        });
-    }
-
-    // MODIFICATION MOT DE PASSE ADMIN
-    const formResetAdmin = document.getElementById('formResetMdpAdmin');
-    if (formResetAdmin) {
-        formResetAdmin.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const ancienMdp = document.getElementById('ancien-mdp-admin').value;
-            const nouveauMdp = document.getElementById('nouveau-mdp-admin').value;
-
-            if (!ancienMdp || !nouveauMdp) {
-                return afficherAlerte("Champs requis", "Veuillez remplir tous les champs.", "info");
-            }
-
-            try {
-                const reponse = await fetch('/api/admin-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ancien_mot_de_passe: ancienMdp, nouveau_mot_de_passe: nouveauMdp.trim() })
-                });
-
-                let data = {};
-                try { data = await reponse.json(); } catch (jsonErr) { data = { erreur: "Redémarrez le serveur Node.js." }; }
-
-                if (reponse.ok) {
-                    await afficherAlerte("Succès", data.message || "Votre mot de passe Administrateur a été modifié !", "succes");
-                    formResetAdmin.reset();
-                } else {
-                    await afficherAlerte("Accès refusé", data.erreur || "Ancien mot de passe incorrect.", "erreur");
-                }
-            } catch (erreur) {
-                await afficherAlerte("Erreur réseau", "Impossible de contacter le serveur.", "erreur");
-            }
-        });
-    }
-
-    // FORMULAIRE IMPORTATION PATIENTS
-    const formImport = document.getElementById('formImportPatients');
-    if (formImport) {
-        formImport.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const fichierInput = document.getElementById('fichierImport');
-            if (!fichierInput || !fichierInput.files || fichierInput.files.length === 0) {
-                return afficherAlerte("Fichier requis", "Veuillez sélectionner un fichier CSV ou Excel.", "info");
-            }
-
-            const fichier = fichierInput.files[0];
-            const lecteur = new FileReader();
-
-            lecteur.onload = async function(evt) {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const classeur = XLSX.read(data, { type: 'array' });
-                    const nomFeuille = classeur.SheetNames[0];
-                    const feuille = classeur.Sheets[nomFeuille];
-                    const patientsJSON = XLSX.utils.sheet_to_json(feuille);
-
-                    if (!patientsJSON || patientsJSON.length === 0) {
-                        return afficherAlerte("Fichier vide", "Le fichier ne contient aucun dossier.", "erreur");
-                    }
-
-                    const reponse = await fetch('/api/patients/import', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(patientsJSON)
-                    });
-
-                    const resData = await reponse.json();
-                    if (reponse.ok) {
-                        await afficherAlerte("Importation réussie", resData.message, "succes");
-                        formImport.reset();
-                        await chargerPatients();
-                        afficherStatsMensuelles();
-                    } else {
-                        await afficherAlerte("Erreur Importation", resData.erreur || "Impossible d'importer.", "erreur");
-                    }
-                } catch (err) {
-                    await afficherAlerte("Format invalide", "Erreur fichier : " + err.message, "erreur");
-                }
-            };
-
-            lecteur.readAsArrayBuffer(fichier);
-        });
-    }
-
-    const sessionActive = localStorage.getItem('sessionCliniqueRole');
-    if (sessionActive && sessionActive !== 'agent') {
-        const themeSauvegarde = localStorage.getItem('themeClinique');
-        if (themeSauvegarde === 'sombre') document.body.classList.add('dark-theme');
-    }
-    if (sessionActive) appliquerDroitsRole(sessionActive);
-});
-
-// --- 5. NAVIGATION ONGLETS ---
-function changerOnglet(section) {
-    const sections = ['patients', 'parametres', 'compte'];
-    sections.forEach(sec => {
-        const elSec = document.getElementById(`section-${sec}`);
-        const elBtn = document.getElementById(`btn-${sec}`);
-        if (elSec) {
-            elSec.classList.remove('section-visible', 'animate-fade');
-            elSec.classList.add('section-cachee');
-        }
-        if (elBtn) elBtn.classList.remove('actif');
+function changerOnglet(sec) {
+    ['patients', 'parametres', 'compte'].forEach(s => { 
+        document.getElementById(`section-${s}`)?.classList.replace('section-visible','section-cachee'); 
+        document.getElementById(`btn-${s}`)?.classList.remove('actif'); 
     });
-
-    const activeSec = document.getElementById(`section-${section}`);
-    const activeBtn = document.getElementById(`btn-${section}`);
-    if (activeSec) {
-        activeSec.classList.remove('section-cachee');
-        activeSec.classList.add('section-visible', 'animate-fade');
-    }
-    if (activeBtn) activeBtn.classList.add('actif');
-
-    if (section === 'parametres') {
-        afficherStatsMensuelles();
-    }
+    document.getElementById(`section-${sec}`)?.classList.replace('section-cachee','section-visible'); 
+    document.getElementById(`btn-${sec}`)?.classList.add('actif');
 }
 
-function changerSousOngletPatients(onglet) {
-    const btnListe = document.getElementById('btn-sous-liste');
-    const btnForm = document.getElementById('btn-sous-form');
-    const zoneListe = document.getElementById('zone-liste-patients');
-    const zoneForm = document.getElementById('zone-form-patient');
-
-    if (onglet === 'liste') {
-        if (btnListe) btnListe.classList.add('actif');
-        if (btnForm) btnForm.classList.remove('actif');
-        if (zoneListe) { zoneListe.classList.remove('section-cachee'); zoneListe.classList.add('section-visible'); }
-        if (zoneForm) { zoneForm.classList.add('section-cachee'); zoneForm.classList.remove('section-visible'); }
-        pageActuelle = 1;
-        afficherPatients(patientsFiltresGlobaux);
-    } else if (onglet === 'form') {
-        if (btnForm) btnForm.classList.add('actif');
-        if (btnListe) btnListe.classList.remove('actif');
-        if (zoneForm) { zoneForm.classList.remove('section-cachee'); zoneForm.classList.add('section-visible'); }
-        if (zoneListe) { zoneListe.classList.add('section-cachee'); zoneListe.classList.remove('section-visible'); }
+function changerSousOngletPatients(ong) {
+    const list = document.getElementById('zone-liste-patients'), form = document.getElementById('zone-form-patient');
+    if(ong==='liste'){ 
+        document.getElementById('btn-sous-liste')?.classList.add('actif'); 
+        document.getElementById('btn-sous-form')?.classList.remove('actif'); 
+        list?.classList.replace('section-cachee','section-visible'); 
+        form?.classList.replace('section-visible','section-cachee'); 
+        afficherPatients(patientsFiltresGlobaux); 
+    } else { 
+        document.getElementById('btn-sous-form')?.classList.add('actif'); 
+        document.getElementById('btn-sous-liste')?.classList.remove('actif'); 
+        form?.classList.replace('section-cachee','section-visible'); 
+        list?.classList.replace('section-visible','section-cachee'); 
     }
 }
 
-// --- 6. CHARGEMENT & AFFICHAGE DES PATIENTS ---
-async function chargerPatients() {
-    try {
-        const reponse = await fetch('/api/patients');
-        if (!reponse.ok) throw new Error();
-        tousLesPatients = await reponse.json(); 
-        filtrerPatients();
-        afficherStatsMensuelles();
-    } catch (e) {}
+// --- 5. GESTION DES PATIENTS ---
+async function chargerPatients() { 
+    try { 
+        const res = await fetch('/api/patients');
+        if (res.ok) { tousLesPatients = await res.json(); filtrerPatients(); }
+    } catch(e){} 
 }
 
-function afficherPatients(listeAAfficher) {
-    const listElement = document.getElementById('listePatients');
-    const paginationElement = document.getElementById('pagination-patients');
-    if (!listElement) return;
-    listElement.innerHTML = ''; 
-    if (paginationElement) paginationElement.innerHTML = '';
-    
-    const badge = document.getElementById('total-dossiers-badge');
-    if (badge) badge.innerText = listeAAfficher.length;
+function afficherPatients(liste) {
+    const ul = document.getElementById('listePatients'); if(!ul) return; ul.innerHTML = '';
+    const badgeTotal = document.getElementById('total-dossiers-badge');
+    if (badgeTotal) badgeTotal.innerText = liste.length;
 
-    if (listeAAfficher.length === 0) { 
-        listElement.innerHTML = '<li style="text-align: center; color: var(--texte-clair); padding: 30px;">Aucun patient trouvé.</li>'; 
+    if(liste.length === 0){ 
+        ul.innerHTML = '<li style="text-align:center;padding:20px;color:var(--texte-clair);">Aucun dossier patient trouvé.</li>'; 
         return; 
     }
+    
+    const maxPage = Math.ceil(liste.length / patientsParPage); 
+    if(pageActuelle > maxPage) pageActuelle = maxPage;
+    
+    // Affichage limité à 5 patients par page
+    liste.slice((pageActuelle - 1) * patientsParPage, pageActuelle * patientsParPage).forEach(p => {
+        let btn = `<button onclick="telechargerFicheA4(${p.id})" style="background:#0D9488;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:5px;font-weight:600;">📄 Fiche</button>`;
+        if(roleActuel !== 'agent') btn += `<button onclick="ouvrirModalEdition(${p.id})" style="background:var(--bleu-primaire);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:5px;font-weight:600;">✏️ Modif</button>`;
+        if(roleActuel === 'admin') btn += `<button onclick="supprimerPatient(${p.id})" style="background:#DC2626;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">🗑️</button>`;
 
-    const totalPages = Math.ceil(listeAAfficher.length / patientsParPage);
-    if (pageActuelle > totalPages) pageActuelle = totalPages;
-    if (pageActuelle < 1) pageActuelle = 1;
-
-    const debut = (pageActuelle - 1) * patientsParPage;
-    const fin = Math.min(debut + patientsParPage, listeAAfficher.length);
-    const patientsDeLaPage = listeAAfficher.slice(debut, fin);
-
-    patientsDeLaPage.forEach(patient => {
-        const li = document.createElement('li');
+        let servicesBadge = p.services_specifiques ? `<div style="margin-top:6px; font-size:12px; color:#0284C7;">🩺 <strong>Services :</strong> ${p.services_specifiques}</div>` : '';
         
-        let boutonsActionsHTML = '';
-        boutonsActionsHTML += `<button onclick="telechargerFicheA4(${patient.id})" style="background-color: #0D9488; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 5px; font-weight: 600;">📄 Fiche A4</button>`;
-
-        if (roleActuel === 'admin' || roleActuel === 'support') {
-            boutonsActionsHTML += `<button onclick="ouvrirModalEdition(${patient.id})" style="background-color: var(--bleu-primaire); color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 5px; font-weight: 600;">✏️ Modifier</button>`;
-        }
-        if (roleActuel === 'admin') {
-            boutonsActionsHTML += `<button onclick="supprimerPatient(${patient.id})" style="background-color: #EF4444; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 10px; font-weight: 600;">🗑️ Supprimer</button>`;
-        }
-
-        const classeConsultation = (patient.consultation_statut === 'Payé') ? 'badge-paye' : 'badge-non-paye';
-        const estControleRequis = (patient.besoin_controle === 'Oui');
-        const classeControle = estControleRequis ? 'badge-controle-oui' : 'badge-controle-non';
-        const texteControle = estControleRequis ? '⚠️ Contrôle requis' : '✅ Pas de contrôle requis';
-
-        let antecedentsHTML = '';
-        let zoneMedicaleHTML = '';
-
-        if (roleActuel !== 'agent') {
-            const badgeAllergie = patient.allergies ? `<span class="badge-allergie">⚠️ Allergies : ${patient.allergies}</span>` : '<span style="color: #0D9488;">Aucune allergie connue</span>';
+        let blocRdvSpecialiste = '';
+        const typeTxt = (p.type_consultation || '').toLowerCase();
+        
+        if (typeTxt.includes('rendez-vous') || typeTxt.includes('spécialiste') || p.date_rdv_specialiste) {
+            const dateEffective = p.date_rdv_specialiste || p.prochain_rdv || p.date_visite || p.date_entree;
+            const dStr = dateEffective ? formaterDateEnLettres(dateEffective) : 'Non renseignée';
+            const heureEffective = p.heure_rdv_specialiste && p.heure_rdv_specialiste.trim() !== '' ? p.heure_rdv_specialiste : '09:00';
             
-            antecedentsHTML = `
-            <div style="background: var(--fond-page); padding: 12px; border-radius: 10px; border: 1px solid var(--bordure); margin-top: 10px;">
-                <div style="margin-bottom: 10px;">${badgeAllergie}</div>
-                <div class="grille-2" style="font-size: 13px; margin-bottom: 10px;">
-                    <div><strong>Maladies chroniques :</strong> ${patient.maladies_chroniques || 'Aucune'}</div>
-                    <div><strong>Chirurgies antérieures :</strong> ${patient.chirurgies || 'Aucune'}</div>
-                    <div><strong>Traitements en cours :</strong> ${patient.traitements_en_cours || 'Aucun'}</div>
-                    <div><strong>Prochain rendez-vous :</strong> ${formaterDateEnLettres(patient.prochain_rdv)}</div>
-                </div>
-                <div style="border-top: 1px solid var(--bordure); padding-top: 8px; margin-top: 8px;">
-                    <strong style="color: var(--bleu-primaire);">Motif de la visite :</strong> ${patient.motif_visite || 'Non renseigné'}<br>
-                    <strong style="color: var(--vert-soin); display: inline-block; margin-top: 4px;">Diagnostic / Avis médical :</strong> ${patient.diagnostic || 'En attente'}
-                </div>
+            blocRdvSpecialiste = `
+            <div style="margin-top:8px; padding:8px 12px; background:rgba(2,132,199,0.08); border-left:4px solid #0284C7; border-radius:6px; font-size:13px; color:#0369A1;">
+                📅 <strong>RDV Spécialiste :</strong> <span style="font-weight:bold;">${dStr}</span> ⏰ à <strong>${heureEffective}</strong>
             </div>`;
-
-            let vitalsHTML = 'Non renseignés';
-            try {
-                if (patient.parametres && patient.parametres.startsWith('{')) {
-                    const v = JSON.parse(patient.parametres);
-                    const tempStyle = (v.temp > 38) ? 'color: #EF4444; font-weight: bold;' : (v.temp >= 36.5 && v.temp <= 37.5 ? 'color: #0D9488; font-weight: bold;' : 'color: #F59E0B; font-weight: bold;');
-                    const poulsStyle = (v.pouls < 60 || v.pouls > 100) ? 'color: #EF4444; font-weight: bold;' : 'color: #0D9488; font-weight: bold;';
-                    const tensStyle = (v.sys > 140 || v.dia > 90) ? 'color: #EF4444; font-weight: bold;' : (v.sys && v.dia ? 'color: #0D9488; font-weight: bold;' : '');
-                    vitalsHTML = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; padding: 10px; border-radius: 6px; border: 1px solid var(--bordure); background-color: rgba(255,255,255,0.6);">
-                        <span>🌡️ Température : <strong style="${tempStyle}">${v.temp ? v.temp + ' °C' : '--'}</strong></span>
-                        <span>⚖️ Poids : <strong style="color: #0284C7;">${v.poids ? v.poids + ' kg' : '--'}</strong></span>
-                        <span>❤️ Fréq. Cardiaque : <strong style="${poulsStyle}">${v.pouls ? v.pouls + ' bpm' : '--'}</strong></span>
-                        <span>🩺 Tension : <strong style="${tensStyle}">${v.sys && v.dia ? v.sys + '/' + v.dia + ' mmHg' : '--'}</strong></span>
-                    </div>`;
-                }
-            } catch (e) {}
-            zoneMedicaleHTML = `<div class="zone-medicale"><strong style="color: var(--bleu-primaire);">📊 Paramètres vitaux :</strong>${vitalsHTML}<strong style="margin-top:12px; display:inline-block; color: var(--bleu-primaire);">📝 Notes médicales :</strong><p style="margin: 5px 0 0 0; white-space: pre-wrap; line-height: 1.5; overflow-wrap: anywhere; word-break: break-word;">${patient.notes || 'Aucune note'}</p></div>`;
         }
 
-        li.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <strong style="font-size: 1.2em; color: var(--texte-sombre);">${patient.nom_complet}</strong>
-            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                ${boutonsActionsHTML}
-                <span class="${classeConsultation}">${patient.consultation_statut || 'Non payé'}</span>
-                <span class="${classeControle}">${texteControle}</span>
-                <span style="font-family: monospace; background: var(--fond-page); padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 12px;">Code: ${patient.code_patient}</span>
+        ul.innerHTML += `<li class="animate-fade">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <strong style="font-size:1.2em;color:var(--texte-sombre);">${p.nom_complet}</strong>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${btn} 
+                    <span class="${p.consultation_statut==='Payé'?'badge-paye':'badge-non-paye'}">${p.consultation_statut||'Non payé'}</span> 
+                    <span style="font-family:monospace;background:var(--fond-page);border:1px solid var(--bordure);padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;">${p.code_patient}</span>
+                </div>
             </div>
-        </div>
-        
-        <div class="grille-2" style="font-size: 13px; color: var(--texte-clair); margin-bottom: 8px;">
-            <span><strong>Sexe :</strong> ${patient.sexe || 'Non renseigné'}</span>
-            <span><strong>Date de naissance :</strong> ${formaterDateEnLettres(patient.date_naissance)}</span>
-            <span><strong>Téléphone :</strong> ${patient.telephone}</span>
-            <span><strong>Première entrée :</strong> ${formaterDateEnLettres(patient.date_entree)}</span>
-        </div>
-        
-        <div style="font-size: 13px; border-top: 1px dashed var(--bordure); padding-top: 8px; margin-bottom: 6px;">
-            <strong>Adresse :</strong> ${patient.adresse || 'Non renseignée'}<br>
-            <strong>Urgence :</strong> ${patient.contact_urgence || 'Aucun contact saisi'}
-        </div>
-        ${antecedentsHTML}
-        ${zoneMedicaleHTML}
-        `;
-
-        listElement.appendChild(li);
+            <div style="font-size:13px;color:var(--texte-clair);margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <span><strong>Type :</strong> <span style="color:#0284C7;font-weight:bold;">${p.type_consultation || 'Consultation généraliste'}</span></span>
+                <span><strong>1ère consultation :</strong> ${formaterDateEnLettres(p.date_entree)}</span>
+                <span><strong>Téléphone :</strong> ${p.telephone}</span>
+                <span><strong>Prochain RDV :</strong> ${formaterDateEnLettres(p.prochain_rdv)}</span>
+            </div>
+            ${blocRdvSpecialiste}
+            ${servicesBadge}
+        </li>`;
     });
 
-    if (totalPages > 1 && paginationElement) {
-        paginationElement.innerHTML = `<button class="btn-page" onclick="changerPage(-1)" ${pageActuelle === 1 ? 'disabled' : ''}>Précédent</button><span>Page ${pageActuelle} / ${totalPages}</span><button class="btn-page" onclick="changerPage(1)" ${pageActuelle === totalPages ? 'disabled' : ''}>Suivant</button>`;
+    // Pagination
+    const pagin = document.getElementById('pagination-patients');
+    if (pagin) {
+        pagin.innerHTML = maxPage > 1 ? `<button onclick="changerPage(-1)" ${pageActuelle===1?'disabled':''}>Précédent</button> Page ${pageActuelle}/${maxPage} <button onclick="changerPage(1)" ${pageActuelle===maxPage?'disabled':''}>Suivant</button>` : '';
     }
 }
 
-function changerPage(dir) { pageActuelle += dir; afficherPatients(patientsFiltresGlobaux); }
+function changerPage(d) { pageActuelle += d; afficherPatients(patientsFiltresGlobaux); }
 
-// --- 7. STATISTIQUES MENSUELLES ---
-function afficherStatsMensuelles() {
-    const corps = document.getElementById('corpsStatsMensuelles');
-    if (!corps) return;
-    corps.innerHTML = '';
+// CRÉATION PATIENT
+document.getElementById('formPatient')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const vitals = { temp: document.getElementById('vit_temp')?.value||null, poids: document.getElementById('vit_poids')?.value||null, pouls: document.getElementById('vit_pouls')?.value||null, sys: document.getElementById('vit_sys')?.value||null, dia: document.getElementById('vit_dia')?.value||null };
+    
+    const typeConsultation = document.getElementById('type_consultation')?.value || 'Consultation généraliste';
+    let dateRdv = document.getElementById('date_rdv_specialiste')?.value || '';
+    let heureRdv = document.getElementById('heure_rdv_specialiste')?.value || '09:00';
+    
+    if ((typeConsultation.toLowerCase().includes('rendez-vous') || typeConsultation.toLowerCase().includes('spécialiste')) && !dateRdv) {
+        dateRdv = document.getElementById('date_entree')?.value || document.getElementById('prochain_rdv')?.value || new Date().toISOString().slice(0, 10);
+    }
 
-    if (!tousLesPatients || tousLesPatients.length === 0) {
-        corps.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--texte-clair); padding: 20px;">Aucun patient enregistré.</td></tr>`;
+    const np = { 
+        nom_complet: document.getElementById('nom_complet').value, 
+        date_naissance: document.getElementById('date_naissance').value, 
+        sexe: document.getElementById('sexe').value, 
+        telephone: document.getElementById('telephone').value, 
+        date_entree: document.getElementById('date_entree').value, 
+        date_visite: document.getElementById('date_visite').value, 
+        adresse: document.getElementById('adresse').value, 
+        contact_urgence: document.getElementById('contact_urgence').value, 
+        type_consultation: typeConsultation,
+        services_specifiques: obtenirServicesCoches('services_specifiques'),
+        date_rdv_specialiste: dateRdv,
+        heure_rdv_specialiste: heureRdv,
+        allergies: document.getElementById('allergies').value, 
+        maladies_chroniques: document.getElementById('maladies_chroniques').value, 
+        chirurgies: document.getElementById('chirurgies').value, 
+        traitements_en_cours: document.getElementById('traitements_en_cours').value, 
+        motif_visite: document.getElementById('motif_visite').value, 
+        diagnostic: document.getElementById('diagnostic').value, 
+        prochain_rdv: document.getElementById('prochain_rdv').value, 
+        consultation_statut: document.getElementById('consultation_statut').value, 
+        besoin_controle: document.getElementById('besoin_controle').value, 
+        parametres: JSON.stringify(vitals), 
+        notes: document.getElementById('notes').value 
+    };
+
+    try { 
+        const r = await fetch('/api/patients', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(np) }); 
+        if(r.ok) { 
+            await afficherAlerte("Succès", "Nouveau dossier patient créé avec succès !", "succes"); 
+            e.target.reset(); 
+            gererAffichageRdvSpecialiste('type_consultation', 'bloc_rdv_specialiste');
+            chargerPatients(); 
+            changerSousOngletPatients('liste'); 
+        } else await afficherAlerte("Erreur", (await r.json()).erreur, "erreur"); 
+    } catch(er){}
+});
+
+// ÉDITION PATIENT
+function ouvrirModalEdition(id) {
+    const p = tousLesPatients.find(x => x.id === id); if(!p) return;
+    document.getElementById('modal-edition').style.display = 'flex';
+    document.getElementById('edit_id').value = p.id;
+    
+    ['nom_complet','date_naissance','sexe','telephone','date_entree','date_visite','adresse','contact_urgence','type_consultation','date_rdv_specialiste','heure_rdv_specialiste','allergies','maladies_chroniques','chirurgies','traitements_en_cours','motif_visite','diagnostic','prochain_rdv','consultation_statut','besoin_controle','notes'].forEach(k => {
+        const el = document.getElementById('edit_'+k);
+        if(el) el.value = p[k]||'';
+    });
+
+    const editHeureEl = document.getElementById('edit_heure_rdv_specialiste');
+    if (editHeureEl && !editHeureEl.value) {
+        editHeureEl.value = '09:00';
+    }
+
+    cocherServicesSpecifiques('edit_services_specifiques', p.services_specifiques);
+    gererAffichageRdvSpecialiste('edit_type_consultation', 'edit_bloc_rdv_specialiste');
+}
+
+function fermerModalEdition() { document.getElementById('modal-edition').style.display = 'none'; }
+
+document.getElementById('formEditPatient')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit_id')?.value;
+    const nomComplet = document.getElementById('edit_nom_complet')?.value?.trim();
+    const telephone = document.getElementById('edit_telephone')?.value?.trim();
+
+    if (!nomComplet || !telephone) {
+        const modal = document.querySelector('#modal-edition .carte') || document.getElementById('modal-edition');
+        if (modal) modal.scrollTop = 0;
+        await afficherAlerte("Champs requis", "Veuillez remplir le Nom complet et le Téléphone.", "erreur");
         return;
     }
 
-    const moisMap = {};
-    const nomsMois = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+    const vitals = { temp: document.getElementById('edit_vit_temp')?.value||null, poids: document.getElementById('edit_vit_poids')?.value||null, pouls: document.getElementById('edit_vit_pouls')?.value||null, sys: document.getElementById('edit_vit_sys')?.value||null, dia: document.getElementById('edit_vit_dia')?.value||null };
+    
+    const typeConsultation = document.getElementById('edit_type_consultation')?.value || 'Consultation généraliste';
+    let dateRdv = document.getElementById('edit_date_rdv_specialiste')?.value || '';
+    let heureRdv = document.getElementById('edit_heure_rdv_specialiste')?.value || '09:00';
 
-    tousLesPatients.forEach(p => {
-        let dateKey = "Date non renseignée";
-        if (p.date_entree && p.date_entree.includes('-')) {
-            const parties = p.date_entree.split('-');
-            if (parties.length === 3) {
-                const annee = parties[0];
-                const moisNum = parseInt(parties[1], 10) - 1;
-                if (moisNum >= 0 && moisNum < 12) {
-                    dateKey = `${annee}-${(moisNum + 1).toString().padStart(2, '0')}`;
-                }
-            }
-        }
-        moisMap[dateKey] = (moisMap[dateKey] || 0) + 1;
-    });
+    if ((typeConsultation.toLowerCase().includes('rendez-vous') || typeConsultation.toLowerCase().includes('spécialiste')) && !dateRdv) {
+        dateRdv = document.getElementById('edit_date_entree')?.value || document.getElementById('edit_prochain_rdv')?.value || new Date().toISOString().slice(0, 10);
+    }
 
-    const moisTries = Object.keys(moisMap).sort().reverse();
-    const totalGlobal = tousLesPatients.length;
+    const mod = {}; 
+    ['nom_complet','date_naissance','sexe','telephone','date_entree','date_visite','adresse','contact_urgence','allergies','maladies_chroniques','chirurgies','traitements_en_cours','motif_visite','diagnostic','prochain_rdv','consultation_statut','besoin_controle','notes'].forEach(k => {
+        const el = document.getElementById('edit_'+k);
+        if (el) mod[k] = el.value;
+    }); 
 
-    moisTries.forEach(key => {
-        const count = moisMap[key];
-        const pourcentage = Math.round((count / totalGlobal) * 100);
+    mod.type_consultation = typeConsultation;
+    mod.date_rdv_specialiste = dateRdv;
+    mod.heure_rdv_specialiste = heureRdv;
+    mod.services_specifiques = obtenirServicesCoches('edit_services_specifiques');
+    mod.parametres = JSON.stringify(vitals);
+    
+    try { 
+        const r = await fetch(`/api/patients/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(mod) }); 
+        if (r.ok) { 
+            await afficherAlerte("Succès", "Dossier médical mis à jour avec succès !", "succes"); 
+            fermerModalEdition(); 
+            chargerPatients(); 
+        } 
+    } catch(er){}
+});
 
-        let libelleMois = key;
-        if (key !== "Date non renseignée" && key.includes('-')) {
-            const [annee, moisStr] = key.split('-');
-            const idxMois = parseInt(moisStr, 10) - 1;
-            libelleMois = `${nomsMois[idxMois]} ${annee}`;
-        }
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>📅 ${libelleMois}</strong></td>
-            <td style="text-align: center;"><span class="badge-stock-normal" style="font-size: 13px;">${count} patient(s)</span></td>
-            <td style="text-align: center;"><strong>${pourcentage}%</strong></td>
-            <td>
-                <div style="background: var(--bordure); border-radius: 6px; height: 10px; width: 100%; overflow: hidden;">
-                    <div style="background: var(--bleu-primaire); height: 100%; width: ${Math.min(100, Math.max(5, pourcentage))}%;"></div>
-                </div>
-            </td>
-        `;
-        corps.appendChild(tr);
-    });
+async function supprimerPatient(id) { 
+    if(confirm("Supprimer ce dossier patient ?")) { 
+        await fetch(`/api/patients/${id}`,{method:'DELETE'}); 
+        chargerPatients(); 
+    } 
 }
 
-// --- 8. IMPORTATION ET EXPORTATION ---
-function preparerDonneesPatientsExport() {
-    return tousLesPatients.map(p => {
-        let v = { temp: '', poids: '', pouls: '', sys: '', dia: '' };
-        try { if (p.parametres && p.parametres.startsWith('{')) v = JSON.parse(p.parametres); } catch (e) {}
-
-        return {
-            "Code Patient": p.code_patient || '',
-            "Nom et Prénom": p.nom_complet || '',
-            "Sexe": p.sexe || '',
-            "Date de naissance": formaterDateEnLettres(p.date_naissance),
-            "Téléphone": p.telephone || '',
-            "Date d'entrée": formaterDateEnLettres(p.date_entree),
-            "Adresse": p.adresse || '',
-            "Contact Urgence": p.contact_urgence || '',
-            "Allergies": p.allergies || '',
-            "Maladies chroniques": p.maladies_chroniques || '',
-            "Chirurgies": p.chirurgies || '',
-            "Traitements en cours": p.traitements_en_cours || '',
-            "Motif de la visite": p.motif_visite || '',
-            "Diagnostic": p.diagnostic || '',
-            "Prochain RDV": formaterDateEnLettres(p.prochain_rdv),
-            "Statut Consultation": p.consultation_statut || 'Non payé',
-            "Contrôle Requis": p.besoin_controle || 'Non',
-            "Notes": p.notes || ''
-        };
-    });
-}
-
-function exporterPatientsCSV() {
-    if (!tousLesPatients || tousLesPatients.length === 0) return afficherAlerte("Export impossible", "Aucun patient à exporter.", "info");
-    const donnees = preparerDonneesPatientsExport();
-    const enTetes = Object.keys(donnees[0]);
-    let contenuCSV = "\uFEFF" + enTetes.map(h => `"${h}"`).join(";") + "\n";
-
-    donnees.forEach(row => {
-        const ligne = enTetes.map(h => `"${(row[h] !== undefined && row[h] !== null) ? String(row[h]).replace(/"/g, '""') : ''}"`).join(";");
-        contenuCSV += ligne + "\n";
-    });
-
-    const blob = new Blob([contenuCSV], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const lien = document.createElement('a');
-    lien.setAttribute('href', url);
-    lien.setAttribute('download', `Patients_TPFV_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(lien);
-    lien.click();
-    document.body.removeChild(lien);
-}
-
-function exporterPatientsExcel() {
-    if (!tousLesPatients || tousLesPatients.length === 0) return afficherAlerte("Export impossible", "Aucun patient à exporter.", "info");
-    const donnees = preparerDonneesPatientsExport();
-    const feuille = XLSX.utils.json_to_sheet(donnees);
-    const classeur = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(classeur, feuille, "Patients");
-    XLSX.writeFile(classeur, `Patients_TPFV_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-
-// --- 9. FICHE PATIENT A4 PDF (LARGEUR ET HAUTEUR CORRIGÉES - SANS TRONQUATURE ET EN 1 PAGE) ---
+// --- 6. FICHE A4 PDF ---
 function telechargerFicheA4(id) {
     const patient = tousLesPatients.find(p => p.id === id);
     if (!patient) return;
 
     let v = { temp: '--', poids: '--', pouls: '--', sys: '--', dia: '--' };
-    try {
-        if (patient.parametres && patient.parametres.startsWith('{')) {
-            v = JSON.parse(patient.parametres);
-        }
-    } catch (e) {}
-
-    const nomFichierFormat = (patient.nom_complet || 'Patient')
-        .trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, '_');
-
-    const nomPDFOfficiel = `Fiche_Medicale_${nomFichierFormat}.pdf`;
+    try { if (patient.parametres && patient.parametres.startsWith('{')) v = JSON.parse(patient.parametres); } catch (e) {}
 
     const fenetre = window.open('', '_blank');
-    if (!fenetre) return afficherAlerte("Pop-up bloqué", "Veuillez autoriser les fenêtres surgissantes.", "info");
+    if (!fenetre) return afficherAlerte("Pop-up bloqué", "Veuillez autoriser les fenêtres surgissantes dans votre navigateur.", "info");
+
+    const dateAujourdhui = formaterDateEnLettres(new Date().toISOString().slice(0, 10));
+
+    let ligneRdvSpecialistePDF = '';
+    const typeTxt = (patient.type_consultation || '').toLowerCase();
+    const dateEffective = patient.date_rdv_specialiste || patient.prochain_rdv || patient.date_visite;
+    
+    if (typeTxt.includes('rendez-vous') || typeTxt.includes('spécialiste') || dateEffective) {
+        const dPdf = dateEffective ? formaterDateEnLettres(dateEffective) : 'Non renseignée';
+        const hPdf = patient.heure_rdv_specialiste && patient.heure_rdv_specialiste.trim() !== '' ? patient.heure_rdv_specialiste : '09:00';
+        ligneRdvSpecialistePDF = `<tr><td colspan="2" style="color:#0284C7; font-weight:bold; padding-top:4px;">📅 RDV Spécialiste : ${dPdf} ⏰ à ${hPdf}</td></tr>`;
+    }
 
     fenetre.document.write(`
         <!DOCTYPE html>
         <html lang="fr">
         <head>
             <meta charset="UTF-8">
-            <title>${nomPDFOfficiel}</title>
+            <title>Fiche_${patient.code_patient || 'Patient'}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
             <style>
                 @page { size: A4 portrait; margin: 8mm; }
                 * { box-sizing: border-box; }
                 body { font-family: Arial, Helvetica, sans-serif; color: #0F172A; background-color: #525659; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
-                .barre-outils-pdf { position: fixed; top: 0; left: 0; right: 0; background: #1E293B; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
-                .btn-pdf { background: #0284C7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
-                .btn-pdf.vert { background: #0D9488; }
-                .btn-pdf:hover { opacity: 0.9; }
-                .page-a4 { background: #FFFFFF; width: 190mm; min-height: 270mm; padding: 8mm; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-top: 50px; overflow: hidden; }
-                @media print { .barre-outils-pdf { display: none !important; } body { background: white; padding: 0; } .page-a4 { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; } }
-                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                td, p, div { vertical-align: top; overflow-wrap: anywhere !important; word-break: break-word !important; }
+                .barre-outils-pdf { position: fixed; top: 0; left: 0; right: 0; background: #1E293B; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; }
+                .btn-pdf { background: #0284C7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+                .page-a4 { background: #FFFFFF; width: 190mm; min-height: 265mm; padding: 10mm; margin-top: 45px; }
+                @media print { .barre-outils-pdf { display: none !important; } body { background: white; padding: 0; } .page-a4 { width: 100%; margin: 0; padding: 0; } }
+                .header-table { width: 100%; border-collapse: collapse; }
+                .header-logo-title { color: #0284C7; margin: 0; font-size: 22px; font-weight: 800; }
+                .header-bar { height: 3px; background: #0284C7; width: 100%; margin: 8px 0 12px 0; }
+                .banner-title { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px; text-align: center; color: #0284C7; font-size: 13px; font-weight: 800; padding: 8px; margin-bottom: 14px; }
+                .section-box { border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.6; }
+                .section-admin { background: #FAFAFA; border: 1px solid #E2E8F0; }
+                .grid-table { width: 100%; border-collapse: collapse; }
+                .grid-table td { width: 50%; vertical-align: top; padding: 2px 0; }
             </style>
         </head>
         <body>
             <div class="barre-outils-pdf">
                 <span>📄 Fiche Médicale : <strong>${patient.nom_complet}</strong></span>
                 <div>
-                    <button class="btn-pdf vert" onclick="telechargerDirectPDF()">📥 Télécharger PDF</button>
-                    <button class="btn-pdf" style="margin-left: 8px;" onclick="window.print()">🖨️ Imprimer</button>
-                    <button class="btn-pdf" style="background: #64748B; margin-left: 8px;" onclick="window.close()">❌ Fermer</button>
+                    <button class="btn-pdf" style="background:#0D9488" onclick="html2pdf().set({margin:0, filename:'Fiche_${patient.code_patient}.pdf', html2canvas:{scale:2}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}}).from(document.getElementById('contenu-fiche-a4')).save()">📥 Télécharger PDF</button>
+                    <button class="btn-pdf" onclick="window.print()">🖨️ Imprimer</button>
                 </div>
             </div>
-
             <div class="page-a4" id="contenu-fiche-a4">
-                <table style="border-bottom: 2px solid #0284C7; padding-bottom: 8px; margin-bottom: 12px;">
+                <table class="header-table">
                     <tr>
-                        <td style="width: 55%;">
-                            <h1 style="color: #0284C7; margin: 0; font-size: 20px; font-weight: 800;">🏥 TPFV</h1>
-                            <p style="margin: 3px 0 0 0; color: #475569; font-size: 10.5px; font-weight: 700;">Toeram - Pitsaboana Fanantenan'ny Vononkandresy III Jaona 2</p>
-                        </td>
-                        <td style="width: 45%; text-align: right; font-size: 11px; color: #475569;">
-                            <p style="margin: 0; white-space: nowrap;"><strong>Code Patient :</strong> <span style="font-family: monospace; font-size: 11.5px; font-weight: bold;">${patient.code_patient || 'N/A'}</span></p>
-                            <p style="margin: 3px 0 0 0; white-space: nowrap;"><strong>Date d'émission :</strong> ${formaterDateEnLettres(new Date().toISOString().slice(0, 10))}</p>
+                        <td style="width: 60%;"><h1 class="header-logo-title">🏥 CliniqueApp</h1></td>
+                        <td style="width: 40%; text-align:right; font-size:11px;">
+                            <strong>Code Patient :</strong> ${patient.code_patient || 'N/A'}<br>
+                            <strong>Date :</strong> ${dateAujourdhui}
                         </td>
                     </tr>
                 </table>
-
-                <h2 style="text-align: center; text-transform: uppercase; color: #0369A1; font-size: 12.5px; margin: 0 0 12px 0; background: #F0F9FF; padding: 5px; border-radius: 6px; border: 1px solid #BAE6FD;">
-                    FICHE MÉDICALE ET HISTORIQUE DU PATIENT
-                </h2>
-
-                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FAFAFA;">
-                    <h3 style="color: #0284C7; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 3px; text-transform: uppercase;">👤 Informations Administratives</h3>
-                    <table style="font-size: 10.5px; line-height: 1.5;">
-                        <tr>
-                            <td style="width: 50%;"><strong>Nom et Prénom :</strong> ${patient.nom_complet || 'Non renseigné'}</td>
-                            <td style="width: 50%;"><strong>Sexe :</strong> ${patient.sexe || 'Non renseigné'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Date de naissance :</strong> ${formaterDateEnLettres(patient.date_naissance)}</td>
-                            <td><strong>Téléphone :</strong> ${patient.telephone || 'Non renseigné'}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Date d'entrée :</strong> ${formaterDateEnLettres(patient.date_entree)}</td>
-                            <td><strong>Adresse :</strong> ${patient.adresse || 'Non renseignée'}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2"><strong>Contact d'Urgence :</strong> ${patient.contact_urgence || 'Aucun contact renseigné'}</td>
-                        </tr>
+                <div class="header-bar"></div>
+                <div class="banner-title">FICHE MÉDICALE ET HISTORIQUE DU PATIENT</div>
+                
+                <div class="section-box section-admin">
+                    <div style="font-weight:bold; color:#0284C7; margin-bottom:6px;">👤 INFORMATIONS & CONSULTATION</div>
+                    <table class="grid-table">
+                        <tr><td><strong>Nom et Prénom :</strong> ${patient.nom_complet}</td><td><strong>Rubrique :</strong> ${patient.type_consultation || 'Consultation généraliste'}</td></tr>
+                        <tr><td><strong>Date de naissance :</strong> ${formaterDateEnLettres(patient.date_naissance)}</td><td><strong>Services :</strong> ${patient.services_specifiques || 'Aucun'}</td></tr>
+                        <tr><td><strong>Téléphone :</strong> ${patient.telephone}</td><td><strong>Adresse :</strong> ${patient.adresse || 'Non renseignée'}</td></tr>
+                        ${ligneRdvSpecialistePDF}
                     </table>
                 </div>
 
-                <div style="border: 1px solid #FCA5A5; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FFF5F5;">
-                    <h3 style="color: #DC2626; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #FCA5A5; padding-bottom: 3px; text-transform: uppercase;">🩺 Antécédents Médicaux</h3>
-                    <table style="font-size: 10.5px; line-height: 1.5;">
-                        <tr>
-                            <td colspan="2" style="color: #DC2626; font-weight: bold;"><strong>⚠️ Allergies connues :</strong> ${patient.allergies || 'Aucune allergie signalée'}</td>
-                        </tr>
-                        <tr>
-                            <td style="width: 50%;"><strong>Maladies chroniques :</strong> ${patient.maladies_chroniques || 'Aucune'}</td>
-                            <td style="width: 50%;"><strong>Chirurgies antérieures :</strong> ${patient.chirurgies || 'Aucune'}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2"><strong>Traitements en cours :</strong> ${patient.traitements_en_cours || 'Aucun'}</td>
-                        </tr>
-                    </table>
+                <div class="section-box" style="background:#FFF5F5; border:1px solid #FCA5A5;">
+                    <div style="font-weight:bold; color:#DC2626; margin-bottom:6px;">🩺 ANTÉCÉDENTS MÉDICAUX</div>
+                    <p><strong>Allergies :</strong> ${patient.allergies || 'Aucune'}</p>
+                    <p><strong>Maladies chroniques :</strong> ${patient.maladies_chroniques || 'Aucune'}</p>
                 </div>
 
-                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FAFAFA;">
-                    <h3 style="color: #0D9488; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 3px; text-transform: uppercase;">📊 Constantes Vitales & Diagnostic</h3>
-                    <table style="background: #FFFFFF; border-radius: 6px; border: 1px solid #CBD5E1; margin-bottom: 8px; font-size: 10.5px; text-align: center;">
-                        <tr>
-                            <td style="padding: 5px; width: 25%;">🌡️ Temp : <strong>${v.temp ? v.temp + ' °C' : '--'}</strong></td>
-                            <td style="padding: 5px; width: 25%;">⚖️ Poids : <strong>${v.poids ? v.poids + ' kg' : '--'}</strong></td>
-                            <td style="padding: 5px; width: 25%;">❤️ Pouls : <strong>${v.pouls ? v.pouls + ' bpm' : '--'}</strong></td>
-                            <td style="padding: 5px; width: 25%;">🩺 Tension : <strong>${v.sys && v.dia ? v.sys + '/' + v.dia + ' mmHg' : '--'}</strong></td>
-                        </tr>
-                    </table>
-                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Motif de la visite :</strong> ${patient.motif_visite || 'Non renseigné'}</p>
-                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Diagnostic / Avis médical :</strong> ${patient.diagnostic || 'En attente'}</p>
-                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Prochain rendez-vous :</strong> ${formaterDateEnLettres(patient.prochain_rdv)}</p>
-                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Notes complémentaires :</strong> ${patient.notes || 'Aucune'}</p>
+                <div class="section-box" style="background:#FAFAFA; border:1px solid #E2E8F0;">
+                    <div style="font-weight:bold; color:#0D9488; margin-bottom:6px;">📊 CONSTANTES VITALES & DIAGNOSTIC</div>
+                    <p><strong>Temp :</strong> ${v.temp||'--'} °C | <strong>Poids :</strong> ${v.poids||'--'} kg | <strong>Pouls :</strong> ${v.pouls||'--'} bpm | <strong>Tension :</strong> ${v.sys&&v.dia?v.sys+'/'+v.dia+' mmHg':'--'}</p>
+                    <p><strong>Motif :</strong> ${patient.motif_visite || 'Non renseigné'}</p>
+                    <p><strong>Diagnostic :</strong> ${patient.diagnostic || 'En attente'}</p>
                 </div>
-
-                <table style="margin-top: 20px; font-size: 10px; color: #475569;">
-                    <tr>
-                        <td style="width: 60%; vertical-align: bottom;">
-                            <p style="margin: 0;"><strong>Statut Consultation :</strong> ${patient.consultation_statut || 'Non payé'}</p>
-                            <p style="margin: 2px 0 0 0;"><strong>Contrôle Requis :</strong> ${patient.besoin_controle || 'Non'}</p>
-                        </td>
-                        <td style="width: 40%; vertical-align: bottom; text-align: right;">
-                            <div style="display: inline-block; text-align: center; border-top: 1px solid #94A3B8; width: 170px; padding-top: 3px;">
-                                <p style="margin: 0; font-weight: bold; color: #1E293B;">Cachet & Signature du Médecin</p>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
             </div>
-
-            <script>
-                function telechargerDirectPDF() {
-                    const el = document.getElementById('contenu-fiche-a4');
-                    const options = {
-                        margin: 0,
-                        filename: '${nomPDFOfficiel}',
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, logging: false },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-                    html2pdf().set(options).from(el).save();
-                }
-            </script>
         </body>
         </html>
     `);
     fenetre.document.close();
-}
-
-// --- 10. SOUMISSIONS FORMULAIRES ---
-document.getElementById('formPatient').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btnSoumission = e.target.querySelector('button[type="submit"]');
-    if (btnSoumission) { btnSoumission.disabled = true; btnSoumission.innerText = "Enregistrement en cours..."; }
-
-    const vitals = {
-        temp: document.getElementById('vit_temp').value ? parseFloat(document.getElementById('vit_temp').value) : null,
-        poids: document.getElementById('vit_poids').value ? parseFloat(document.getElementById('vit_poids').value) : null,
-        pouls: document.getElementById('vit_pouls').value ? parseInt(document.getElementById('vit_pouls').value, 10) : null,
-        sys: document.getElementById('vit_sys').value ? parseInt(document.getElementById('vit_sys').value, 10) : null,
-        dia: document.getElementById('vit_dia').value ? parseInt(document.getElementById('vit_dia').value, 10) : null
-    };
-
-    const nouveauPatient = {
-        nom_complet: document.getElementById('nom_complet').value,
-        date_naissance: document.getElementById('date_naissance').value,
-        sexe: document.getElementById('sexe').value,
-        telephone: document.getElementById('telephone').value,
-        date_entree: document.getElementById('date_entree').value,
-        adresse: document.getElementById('adresse').value,
-        contact_urgence: document.getElementById('contact_urgence').value,
-        allergies: document.getElementById('allergies').value,
-        maladies_chroniques: document.getElementById('maladies_chroniques').value,
-        chirurgies: document.getElementById('chirurgies').value,
-        traitements_en_cours: document.getElementById('traitements_en_cours').value,
-        motif_visite: document.getElementById('motif_visite').value,
-        diagnostic: document.getElementById('diagnostic').value,
-        prochain_rdv: document.getElementById('prochain_rdv').value,
-        consultation_statut: document.getElementById('consultation_statut').value,
-        besoin_controle: document.getElementById('besoin_controle').value,
-        parametres: JSON.stringify(vitals),
-        notes: document.getElementById('notes').value
-    };
-
-    try {
-        const reponse = await fetch('/api/patients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nouveauPatient) });
-        if (reponse.ok) { 
-            await afficherAlerte("Succès", "Dossier médical créé avec succès !", "succes"); 
-            document.getElementById('formPatient').reset(); 
-            await chargerPatients(); 
-            changerSousOngletPatients('liste');
-        } else {
-            let msg = "Erreur serveur";
-            try { const err = await reponse.json(); msg = err.erreur; } catch(ex) {}
-            await afficherAlerte("Erreur", msg, "erreur");
-        }
-    } catch (erreur) { await afficherAlerte("Erreur", "Connexion interrompue.", "erreur"); }
-    finally { if (btnSoumission) { btnSoumission.disabled = false; btnSoumission.innerText = "Enregistrer le dossier médical"; } }
-});
-
-function ouvrirModalEdition(id) {
-    const modal = document.getElementById('modal-edition');
-    if (modal) modal.style.display = 'flex';
-    document.body.classList.add('modal-ouvert');
-    const patient = tousLesPatients.find(p => p.id === id);
-    if (!patient) return;
-
-    document.getElementById('edit_id').value = patient.id;
-    document.getElementById('edit_nom_complet').value = patient.nom_complet || '';
-    document.getElementById('edit_date_naissance').value = patient.date_naissance || '';
-    document.getElementById('edit_sexe').value = patient.sexe || 'Masculin';
-    document.getElementById('edit_telephone').value = patient.telephone || '';
-    document.getElementById('edit_date_entree').value = patient.date_entree || '';
-    document.getElementById('edit_adresse').value = patient.adresse || '';
-    document.getElementById('edit_contact_urgence').value = patient.contact_urgence || '';
-    document.getElementById('edit_allergies').value = patient.allergies || '';
-    document.getElementById('edit_maladies_chroniques').value = patient.maladies_chroniques || '';
-    document.getElementById('edit_chirurgies').value = patient.chirurgies || '';
-    document.getElementById('edit_traitements_en_cours').value = patient.traitements_en_cours || '';
-    document.getElementById('edit_motif_visite').value = patient.motif_visite || '';
-    document.getElementById('edit_diagnostic').value = patient.diagnostic || '';
-    document.getElementById('edit_prochain_rdv').value = patient.prochain_rdv || '';
-    document.getElementById('edit_consultation_statut').value = patient.consultation_statut || 'Non payé';
-    document.getElementById('edit_besoin_controle').value = patient.besoin_controle || 'Non';
-    
-    let v = { temp: '', poids: '', pouls: '', sys: '', dia: '' };
-    try { if (patient.parametres && patient.parametres.startsWith('{')) v = JSON.parse(patient.parametres); } catch (e) {}
-    document.getElementById('edit_vit_temp').value = v.temp || '';
-    document.getElementById('edit_vit_poids').value = v.poids || '';
-    document.getElementById('edit_vit_pouls').value = v.pouls || '';
-    document.getElementById('edit_vit_sys').value = v.sys || '';
-    document.getElementById('edit_vit_dia').value = v.dia || '';
-    document.getElementById('edit_notes').value = patient.notes || '';
-}
-
-function fermerModalEdition() {
-    const modal = document.getElementById('modal-edition');
-    if (modal) modal.style.display = 'none';
-    document.body.classList.remove('modal-ouvert');
-}
-
-document.getElementById('formEditPatient').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const id = document.getElementById('edit_id').value;
-    const vitals = {
-        temp: document.getElementById('edit_vit_temp').value ? parseFloat(document.getElementById('edit_vit_temp').value) : null,
-        poids: document.getElementById('edit_vit_poids').value ? parseFloat(document.getElementById('edit_vit_poids').value) : null,
-        pouls: document.getElementById('edit_vit_pouls').value ? parseInt(document.getElementById('edit_vit_pouls').value, 10) : null,
-        sys: document.getElementById('edit_vit_sys').value ? parseInt(document.getElementById('edit_vit_sys').value, 10) : null,
-        dia: document.getElementById('edit_vit_dia').value ? parseInt(document.getElementById('edit_vit_dia').value, 10) : null
-    };
-
-    const modif = {
-        nom_complet: document.getElementById('edit_nom_complet').value,
-        date_naissance: document.getElementById('edit_date_naissance').value,
-        sexe: document.getElementById('edit_sexe').value,
-        telephone: document.getElementById('edit_telephone').value,
-        date_entree: document.getElementById('edit_date_entree').value,
-        adresse: document.getElementById('edit_adresse').value,
-        contact_urgence: document.getElementById('edit_contact_urgence').value,
-        allergies: document.getElementById('edit_allergies').value,
-        maladies_chroniques: document.getElementById('edit_maladies_chroniques').value,
-        chirurgies: document.getElementById('edit_chirurgies').value,
-        traitements_en_cours: document.getElementById('edit_traitements_en_cours').value,
-        motif_visite: document.getElementById('edit_motif_visite').value,
-        diagnostic: document.getElementById('edit_diagnostic').value,
-        prochain_rdv: document.getElementById('edit_prochain_rdv').value,
-        consultation_statut: document.getElementById('edit_consultation_statut').value,
-        besoin_controle: document.getElementById('edit_besoin_controle').value,
-        parametres: JSON.stringify(vitals),
-        notes: document.getElementById('edit_notes').value
-    };
-
-    try {
-        const reponse = await fetch(`/api/patients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modif) });
-        if (reponse.ok) { 
-            await afficherAlerte("Mis à jour", "Le dossier médical a été modifié !", "succes"); 
-            fermerModalEdition(); 
-            await chargerPatients(); 
-        }
-    } catch (erreur) { await afficherAlerte("Erreur", "Impossible de contacter le serveur.", "erreur"); }
-});
-
-async function supprimerPatient(id) {
-    if (confirm("⚠️ Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ?")) {
-        try {
-            const reponse = await fetch(`/api/patients/${id}`, { method: 'DELETE' });
-            if (reponse.ok) { await afficherAlerte("Supprimé", "Le dossier a été retiré.", "succes"); chargerPatients(); }
-        } catch (erreur) { await afficherAlerte("Erreur", "Connexion interrompue.", "erreur"); }
-    }
 }

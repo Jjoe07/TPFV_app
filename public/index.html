@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TPFV - Dossier Médical</title>
-    <link rel="icon" type="image/png" href="icone.png">
     <link rel="stylesheet" href="style.css">
-    <!-- BIBLIOTHÈQUES INTÉGRÉES : GENERATION PDF & SPREADSHEET EXCEL/CSV -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="app.js" defer></script>
 </head>
 <body>
 
@@ -17,7 +12,7 @@
     <div id="ecran-connexion" class="section-visible">
         <div class="carte-connexion">
             <div class="logo-connexion">
-                <span class="icone-logo-app">🏥</span>
+                <img src="logo.png" alt="Logo TPFV" class="icone-logo-app">
                 <h2>TPFV</h2>
             </div>
             <p class="sous-titre-connexion">Veuillez vous identifier</p>
@@ -26,18 +21,16 @@
                 <div class="champ-groupe-connexion">
                     <label for="choix-role">Votre rôle</label>
                     <select id="choix-role" required>
-                        <option value="agent">👨‍💼 Agent (Accueil / Saisie)</option>
-                        <option value="support">🛠️ Support (Consultation / Modification)</option>
-                        <option value="admin">🛡️ Administrateur (Complet)</option>
+                        <option value="agent">👨‍💼 Agent</option>
+                        <option value="support">🛠️ Support</option>
+                        <option value="admin">🛡️ Admin</option>
                     </select>
                 </div>
-
                 <div class="champ-groupe-connexion">
                     <label for="mot-de-passe">Mot de passe</label>
-                    <input type="password" id="mot-de-passe" placeholder="Entrez votre mot de passe..." required>
+                    <input type="password" id="mot-de-passe" placeholder="••••••••" required>
                 </div>
-                
-                <button type="submit" class="btn-connexion-unique">Accéder à l'application</button>
+                <button type="submit" class="btn-connexion-unique">Accéder</button>
             </form>
         </div>
     </div>
@@ -45,249 +38,354 @@
     <!-- APPLICATION PRINCIPALE -->
     <div id="application-principale" class="section-cachee">
         <header class="en-tete">
-            <div class="logo-container" onclick="location.reload()" title="Cliquer pour rafraîchir l'application" style="cursor: pointer;">
+            <div class="logo-container">
                 <h1>🏥 TPFV</h1>
             </div>
-            
             <div class="barre-recherche-globale">
                 <select id="filtre-recherche" class="select-header">
                     <option value="tout">Partout...</option>
-                    <option value="nom">Nom complet</option>
-                    <option value="code">Code Patient</option>
+                    <option value="nom">Nom</option>
+                    <option value="code">Code</option>
                     <option value="telephone">Téléphone</option>
                 </select>
-                <input type="text" id="champ-recherche" class="input-header" placeholder="🔍 Rechercher un patient en temps réel...">
+                <input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header">
             </div>
-
-            <nav class="onglets">
-                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👤 Patients</button>
-                <button id="btn-inventaire" class="onglet" onclick="location.href='inventaire.html'" style="display: none;">💊 Inventaire Pharmacie</button>
-                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')" style="display: none;">⚙️ Paramètres</button>
-                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')" style="display: none;">🔐 Mon Compte</button>
-                <button id="btn-theme" class="onglet" onclick="basculerTheme()">🌙 Mode Sombre</button>
-                <button class="onglet" style="color: #EF4444; border-color: #EF4444;" onclick="seDeconnecter()">Déconnexion</button>
-            </nav>
+            <div class="onglets">
+                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
+                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
+                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
+                <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
+                <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
+            </div>
         </header>
 
         <main class="conteneur">
-            
             <!-- SECTION PATIENTS -->
-            <div id="section-patients" class="section-visible animate-fade conteneur-layout-sidebar">
-                <aside class="barre-laterale-gauche">
-                    <div class="menu-sidebar">
-                        <span class="titre-menu-sidebar">MENU GESTION</span>
-                        <button id="btn-sous-liste" class="btn-sidebar actif" onclick="changerSousOngletPatients('liste')">
-                            📁 Dossiers Patients (<span id="total-dossiers-badge">0</span>)
-                        </button>
-                        <button id="btn-sous-form" class="btn-sidebar" onclick="changerSousOngletPatients('form')">
-                            ➕ Ajouter un Patient
-                        </button>
-                    </div>
-                </aside>
-
-                <div class="zone-contenu-droite">
-                    <!-- FORMULAIRE PATIENT -->
-                    <div id="zone-form-patient" class="section-cachee">
-                        <section class="carte">
-                            <h2>Nouveau Dossier Patient</h2>
-                            <form id="formPatient">
-                                <div class="section-form-bloc">
-                                    <h3 class="titre-bloc-form">👤 Informations administratives</h3>
-                                    <div class="champ-groupe">
-                                        <label for="nom_complet">Nom et Prénom *</label>
-                                        <input type="text" id="nom_complet" placeholder="Ex: Jean Dupont" required>
-                                    </div>
-                                    <div class="grille-2">
-                                        <div class="champ-groupe"><label for="date_naissance">Date de naissance *</label><input type="date" id="date_naissance" required></div>
-                                        <div class="champ-groupe"><label for="sexe">Sexe *</label><select id="sexe" required><option value="">Sélectionner...</option><option value="Masculin">Masculin</option><option value="Féminin">Féminin</option></select></div>
-                                    </div>
-                                    <div class="grille-2">
-                                        <div class="champ-groupe"><label for="telephone">Téléphone *</label><input type="tel" id="telephone" placeholder="Ex: +261 34 00 000 00" required></div>
-                                        <div class="champ-groupe"><label for="date_entree">Date d'entrée *</label><input type="date" id="date_entree" required></div>
-                                    </div>
-                                    <div class="champ-groupe"><label for="adresse">Adresse complète</label><input type="text" id="adresse" placeholder="Ex: Lot IVB Ambohipo, Antananarivo"></div>
-                                    <div class="champ-groupe"><label for="contact_urgence">Personne à contacter en cas d'urgence</label><input type="text" id="contact_urgence" placeholder="Ex: Marie Dupont (Épouse) - +261 33 00 000 00"></div>
-                                </div>
-
-                                <div class="section-form-bloc">
-                                    <h3 class="titre-bloc-form rouge">🩺 Antécédents médicaux</h3>
-                                    <div class="grille-2">
-                                        <div class="champ-groupe"><label for="allergies" style="color: #DC2626;">⚠️ Allergies</label><input type="text" id="allergies" placeholder="Ex: Pénicilline, Latex..."></div>
-                                        <div class="champ-groupe"><label for="maladies_chroniques">Maladies chroniques</label><input type="text" id="maladies_chroniques" placeholder="Ex: Hypertension artérielle, Diabète..."></div>
-                                    </div>
-                                    <div class="grille-2">
-                                        <div class="champ-groupe"><label for="chirurgies">Chirurgies antérieures</label><input type="text" id="chirurgies" placeholder="Ex: Appendicectomie en 2010..."></div>
-                                        <div class="champ-groupe"><label for="traitements_en_cours">Traitements en cours</label><input type="text" id="traitements_en_cours" placeholder="Ex: Amlodipine 5 mg (1 fois par jour)..."></div>
-                                    </div>
-                                </div>
-
-                                <div class="section-form-bloc">
-                                    <h3 class="titre-bloc-form vert">📋 Données cliniques et suivi</h3>
-                                    <div class="champ-groupe"><label for="motif_visite">Motif de la visite</label><textarea id="motif_visite" rows="2" placeholder="Ex: Douleur thoracique et essoufflement léger depuis 48 heures..."></textarea></div>
-                                    <div class="champ-groupe"><label for="diagnostic">Diagnostic / Avis médical</label><textarea id="diagnostic" rows="2" placeholder="Ex: Poussée hypertensive légère liée au stress..."></textarea></div>
-                                    <div class="grille-2">
-                                        <div class="champ-groupe"><label for="prochain_rdv">Prochain rendez-vous</label><input type="date" id="prochain_rdv"></div>
-                                        <div class="champ-groupe"><label for="consultation_statut">Statut Consultation</label><select id="consultation_statut" required><option value="Non payé">🔴 Non payé</option><option value="Payé">🟢 Payé</option></select></div>
-                                    </div>
-                                    <div class="champ-groupe"><label for="besoin_controle">Contrôle requis ?</label><select id="besoin_controle" required><option value="Non">❌ Non</option><option value="Oui">⚠️ Oui</option></select></div>
-                                </div>
-
-                                <div id="champs-medicaux" style="display: none; width: 100%;">
-                                    <h3 style="margin-top: 15px; font-size: 15px; color: var(--bleu-primaire); border-bottom: 1px solid var(--bordure); padding-bottom: 5px;">📊 Paramètres Vitaux</h3>
-                                    <div class="grille-vitals">
-                                        <div class="champ-groupe"><label for="vit_temp">Température (°C)</label><input type="number" id="vit_temp" step="0.1" placeholder="37.0"></div>
-                                        <div class="champ-groupe"><label for="vit_poids">Poids (kg)</label><input type="number" id="vit_poids" step="0.1" placeholder="70"></div>
-                                        <div class="champ-groupe"><label for="vit_pouls">Pouls (bpm)</label><input type="number" id="vit_pouls" placeholder="75"></div>
-                                        <div class="champ-groupe"><label>Tension (mmHg)</label><div style="display: flex; gap: 5px;"><input type="number" id="vit_sys" placeholder="Sys" style="flex: 1;"><input type="number" id="vit_dia" placeholder="Dia" style="flex: 1;"></div></div>
-                                    </div>
-                                    <div class="champ-groupe" style="margin-top: 15px;"><label for="notes">Notes médicales</label><textarea id="notes" rows="3" placeholder="Saisir les observations..."></textarea></div>
-                                </div>
-
-                                <button type="submit" class="btn-principal" style="margin-top: 15px;">Enregistrer le dossier médical</button>
-                            </form>
-                        </section>
-                    </div>
-
-                    <!-- LISTE DES PATIENTS -->
-                    <div id="zone-liste-patients" class="carte transparent section-visible">
-                        <h2>Liste des Dossiers Médicaux</h2>
-                        <ul id="listePatients" class="liste-donnees"></ul>
-                        <div id="pagination-patients" class="pagination-conteneur"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION PARAMÈTRES -->
-            <div id="section-parametres" class="section-cachee animate-fade">
-                <section class="carte">
-                    <h2>Sécurité de l'Équipe</h2>
-                    <form id="formResetMdpEquipe">
-                        <div class="grille-2">
-                            <div class="champ-groupe"><label for="role-a-modifier">Compte</label><select id="role-a-modifier" required><option value="agent">👨‍💼 Agent</option><option value="support">🛠️ Support</option></select></div>
-                            <div class="champ-groupe"><label for="nouveau-mdp-equipe">Nouveau mot de passe</label><input type="text" id="nouveau-mdp-equipe" required></div>
+            <section id="section-patients" class="section-visible">
+                <div class="conteneur-layout-sidebar">
+                    <aside class="barre-laterale-gauche">
+                        <span class="titre-menu-sidebar">DOSSIERS PATIENTS</span>
+                        <div class="menu-sidebar">
+                            <button id="btn-sous-liste" class="btn-sidebar actif" onclick="changerSousOngletPatients('liste')">📋 Liste (<span id="total-dossiers-badge">0</span>)</button>
+                            <button id="btn-sous-form" class="btn-sidebar" onclick="changerSousOngletPatients('form')">➕ Nouveau Patient</button>
                         </div>
-                        <button type="submit" class="btn-principal" style="background-color: #F59E0B;">Mettre à jour</button>
-                    </form>
-                </section>
+                    </aside>
 
-                <section class="carte" style="margin-top: 20px;">
-                    <h2>📈 Statistiques des Inscriptions Mensuelles</h2>
-                    <p style="color: var(--texte-clair); font-size: 13.5px; margin-bottom: 15px;">
-                        Vue détaillée du nombre de nouveaux patients enregistrés mois par mois dans la clinique TPFV.
-                    </p>
-                    <div class="conteneur-tableau-fluide">
-                        <table class="tableau-inventaire">
-                            <thead>
-                                <tr>
-                                    <th>Mois &amp; Année</th>
-                                    <th style="text-align: center;">Nouveaux Patients Inscrits</th>
-                                    <th style="text-align: center;">Part du Total (%)</th>
-                                    <th>Visuel d'Inscriptions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="corpsStatsMensuelles"></tbody>
-                        </table>
-                    </div>
-                </section>
+                    <div class="contenu-central">
+                        <!-- ZONE LISTE PATIENTS -->
+                        <div id="zone-liste-patients" class="section-visible">
+                            <ul id="listePatients" class="liste-donnees"></ul>
+                            <div id="pagination-patients" style="display:flex;justify-content:center;gap:10px;margin-top:15px;"></div>
+                        </div>
 
-                <section class="carte" style="margin-top: 20px;">
-                    <h2>📁 Import &amp; Export des Dossiers Patients</h2>
-                    <div class="grille-2">
-                        <div class="section-form-bloc">
-                            <h3 class="titre-bloc-form bleu">📥 Exporter les données</h3>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button type="button" onclick="exporterPatientsCSV()" class="btn-action-inv vert" style="flex: 1;">📄 CSV</button>
-                                <button type="button" onclick="exporterPatientsExcel()" class="btn-action-inv bleu" style="flex: 1;">📊 Excel (.xlsx)</button>
+                        <!-- ZONE FORMULAIRE NOUVEAU PATIENT -->
+                        <div id="zone-form-patient" class="section-cachee">
+                            <div class="carte">
+                                <h2>Nouveau Dossier Patient</h2>
+                                <form id="formPatient">
+                                    <div class="grille-2">
+                                        <div class="champ-groupe">
+                                            <label>Nom et Prénom *</label>
+                                            <input type="text" id="nom_complet" required>
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Téléphone *</label>
+                                            <input type="text" id="telephone" required>
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Date de naissance</label>
+                                            <input type="date" id="date_naissance">
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Sexe</label>
+                                            <select id="sexe">
+                                                <option value="Masculin">Masculin</option>
+                                                <option value="Féminin">Féminin</option>
+                                            </select>
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>1ère consultation</label>
+                                            <input type="date" id="date_entree">
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Date de visite</label>
+                                            <input type="date" id="date_visite">
+                                        </div>
+                                    </div>
+
+                                    <!-- TYPE DE CONSULTATION & SERVICES -->
+                                    <div class="section-form-bloc">
+                                        <div class="titre-bloc-form">🩺 TYPE DE CONSULTATION & SERVICES</div>
+                                        <div class="grille-2">
+                                            <div class="champ-groupe">
+                                                <label>Type de consultation</label>
+                                                <select id="type_consultation" onchange="gererAffichageRdvSpecialiste('type_consultation', 'bloc_rdv_specialiste')">
+                                                    <option value="Consultation généraliste">1 - Consultation généraliste</option>
+                                                    <option value="Consultation spécialisée">2 - Consultation spécialisée</option>
+                                                    <option value="Rendez-vous spécialiste">3 - Rendez-vous spécialiste</option>
+                                                    <option value="Autres services">4 - Autres services</option>
+                                                </select>
+                                            </div>
+                                            <div class="champ-groupe">
+                                                <label>Soins / Services spécifiques (Autres services) :</label>
+                                                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+                                                    <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="services_specifiques" value="Dentisterie"> 🦷 Dentisterie</label>
+                                                    <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="services_specifiques" value="Consultation prénatale"> 🤰 Consultation prénatale</label>
+                                                    <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="services_specifiques" value="Soins infirmiers"> 🩺 Soins infirmiers</label>
+                                                    <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="services_specifiques" value="Ophtalmologie"> 👁️ Ophtalmologie</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- BLOC DYNAMIQUE RDV SPÉCIALISTE (DATE & HORAIRE) -->
+                                        <div id="bloc_rdv_specialiste" class="grille-2" style="display:none; margin-top:12px; background:rgba(2,132,199,0.06); padding:10px; border-radius:8px; border:1px solid #BAE6FD;">
+                                            <div class="champ-groupe">
+                                                <label style="color:#0284C7; font-weight:bold;">📅 Date du RDV Spécialiste</label>
+                                                <input type="date" id="date_rdv_specialiste">
+                                            </div>
+                                            <div class="champ-groupe">
+                                                <label style="color:#0284C7; font-weight:bold;">⏰ Horaire du RDV (Heure)</label>
+                                                <input type="time" id="heure_rdv_specialiste">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="grille-2">
+                                        <div class="champ-groupe">
+                                            <label>Adresse</label>
+                                            <input type="text" id="adresse">
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Contact d'urgence</label>
+                                            <input type="text" id="contact_urgence">
+                                        </div>
+                                    </div>
+
+                                    <div id="champs-medicaux">
+                                        <div class="section-form-bloc">
+                                            <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS MÉDICAUX</div>
+                                            <div class="grille-2">
+                                                <div class="champ-groupe">
+                                                    <label>Allergies connues</label>
+                                                    <input type="text" id="allergies" placeholder="Ex: Pénicilline">
+                                                </div>
+                                                <div class="champ-groupe">
+                                                    <label>Maladies chroniques</label>
+                                                    <input type="text" id="maladies_chroniques">
+                                                </div>
+                                                <div class="champ-groupe">
+                                                    <label>Chirurgies antérieures</label>
+                                                    <input type="text" id="chirurgies">
+                                                </div>
+                                                <div class="champ-groupe">
+                                                    <label>Traitements en cours</label>
+                                                    <input type="text" id="traitements_en_cours">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-form-bloc">
+                                            <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
+                                            <div class="champ-groupe">
+                                                <label>Motif de consultation</label>
+                                                <textarea id="motif_visite" rows="2"></textarea>
+                                            </div>
+                                            <div class="champ-groupe">
+                                                <label>Diagnostic / Avis médical</label>
+                                                <textarea id="diagnostic" rows="2"></textarea>
+                                            </div>
+                                            <div class="grille-vitals">
+                                                <div class="champ-groupe"><label>Temp (°C)</label><input type="text" id="vit_temp"></div>
+                                                <div class="champ-groupe"><label>Poids (kg)</label><input type="text" id="vit_poids"></div>
+                                                <div class="champ-groupe"><label>Pouls (bpm)</label><input type="text" id="vit_pouls"></div>
+                                                <div class="champ-groupe"><label>Sys (mmHg)</label><input type="text" id="vit_sys"></div>
+                                                <div class="champ-groupe"><label>Dia (mmHg)</label><input type="text" id="vit_dia"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="grille-2">
+                                        <div class="champ-groupe">
+                                            <label>Prochain RDV</label>
+                                            <input type="date" id="prochain_rdv">
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Statut Consultation</label>
+                                            <select id="consultation_statut">
+                                                <option value="Payé">Payé</option>
+                                                <option value="Non payé">Non payé</option>
+                                            </select>
+                                        </div>
+                                        <div class="champ-groupe">
+                                            <label>Contrôle Requis</label>
+                                            <select id="besoin_controle">
+                                                <option value="Non">Non</option>
+                                                <option value="Oui">Oui</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="champ-groupe">
+                                        <label>Notes complémentaires</label>
+                                        <textarea id="notes" rows="2"></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn-principal" style="margin-top:15px;">💾 Enregistrer le dossier</button>
+                                </form>
                             </div>
                         </div>
-                        <div class="section-form-bloc">
-                            <h3 class="titre-bloc-form vert">📤 Importer des patients</h3>
-                            <form id="formImportPatients">
-                                <div class="champ-groupe"><input type="file" id="fichierImport" accept=".csv, .xlsx, .xls" required style="padding: 6px;"></div>
-                                <button type="submit" class="btn-principal" style="background-color: var(--vert-soin);">Lancer l'importation</button>
-                            </form>
-                        </div>
                     </div>
-                </section>
-            </div>
+                </div>
+            </section>
 
-            <!-- SECTION MON COMPTE -->
-            <div id="section-compte" class="section-cachee animate-fade">
-                <section class="carte">
-                    <h2>Mon Compte Administrateur</h2>
-                    <form id="formResetMdpAdmin">
-                        <div class="grille-2">
-                            <div class="champ-groupe"><label for="ancien-mdp-admin">Ancien mot de passe</label><input type="password" id="ancien-mdp-admin" required></div>
-                            <div class="champ-groupe"><label for="nouveau-mdp-admin">Nouveau mot de passe</label><input type="password" id="nouveau-mdp-admin" required></div>
-                        </div>
-                        <button type="submit" class="btn-principal" style="background-color: #EF4444;">Modifier mon mot de passe</button>
+            <!-- SECTION PARAMÈTRES (ADMIN) -->
+            <section id="section-parametres" class="section-cachee">
+                <div class="carte">
+                    <h2>Mdp Équipe</h2>
+                    <form id="formResetMdpEquipe" style="display:flex; gap:10px; align-items:center;">
+                        <select id="role-a-modifier" class="select-header">
+                            <option value="support">Support</option>
+                            <option value="agent">Agent</option>
+                        </select>
+                        <input type="password" id="nouveau-mdp-equipe" placeholder="Nouveau mot de passe" class="input-header" required>
+                        <button type="submit" class="btn-principal" style="background:#EAB308;">Mettre à jour</button>
                     </form>
-                </section>
-            </div>
+                </div>
+            </section>
 
+            <!-- SECTION MON COMPTE (ADMIN) -->
+            <section id="section-compte" class="section-cachee">
+                <div class="carte">
+                    <h2>Modifier mot de passe Administrateur</h2>
+                    <form id="formResetMdpAdmin">
+                        <div class="champ-groupe">
+                            <label>Ancien mot de passe</label>
+                            <input type="password" id="ancien-mdp-admin" required>
+                        </div>
+                        <div class="champ-groupe">
+                            <label>Nouveau mot de passe</label>
+                            <input type="password" id="nouveau-mdp-admin" required>
+                        </div>
+                        <button type="submit" class="btn-principal">Mettre à jour</button>
+                    </form>
+                </div>
+            </section>
         </main>
     </div>
 
-    <!-- MODALE MODIFICATION PATIENT -->
+    <!-- MODALE ÉDITION PATIENT -->
     <div id="modal-edition">
         <div class="carte">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 style="margin: 0; font-weight: 700;">✏️ Modifier le dossier médical</h2>
-                <button onclick="fermerModalEdition()" style="background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>✏️ Modifier Dossier Patient</h2>
+                <button onclick="fermerModalEdition()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
             </div>
             <form id="formEditPatient">
                 <input type="hidden" id="edit_id">
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Nom et Prénom *</label><input type="text" id="edit_nom_complet" required></div>
+                    <div class="champ-groupe"><label>Téléphone *</label><input type="text" id="edit_telephone" required></div>
+                    <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="edit_date_naissance"></div>
+                    <div class="champ-groupe">
+                        <label>Sexe</label>
+                        <select id="edit_sexe">
+                            <option value="Masculin">Masculin</option>
+                            <option value="Féminin">Féminin</option>
+                        </select>
+                    </div>
+                    <div class="champ-groupe"><label>1ère consultation</label><input type="date" id="edit_date_entree"></div>
+                    <div class="champ-groupe"><label>Date de visite</label><input type="date" id="edit_date_visite"></div>
+                </div>
+
+                <!-- RUBRIQUES & SERVICES EN ÉDITION -->
                 <div class="section-form-bloc">
-                    <h3 class="titre-bloc-form">👤 Informations Administratives</h3>
-                    <div class="champ-groupe"><label>Nom et Prénom</label><input type="text" id="edit_nom_complet" required></div>
+                    <div class="titre-bloc-form">🩺 TYPE DE CONSULTATION & SERVICES</div>
                     <div class="grille-2">
-                        <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="edit_date_naissance" required></div>
-                        <div class="champ-groupe"><label>Sexe</label><select id="edit_sexe" required><option value="Masculin">Masculin</option><option value="Féminin">Féminin</option></select></div>
+                        <div class="champ-groupe">
+                            <label>Type de consultation</label>
+                            <select id="edit_type_consultation" onchange="gererAffichageRdvSpecialiste('edit_type_consultation', 'edit_bloc_rdv_specialiste')">
+                                <option value="Consultation généraliste">1 - Consultation généraliste</option>
+                                <option value="Consultation spécialisée">2 - Consultation spécialisée</option>
+                                <option value="Rendez-vous spécialiste">3 - Rendez-vous spécialiste</option>
+                                <option value="Autres services">4 - Autres services</option>
+                            </select>
+                        </div>
+                        <div class="champ-groupe">
+                            <label>Soins / Services spécifiques (Autres services) :</label>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+                                <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="edit_services_specifiques" value="Dentisterie"> 🦷 Dentisterie</label>
+                                <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="edit_services_specifiques" value="Consultation prénatale"> 🤰 Consultation prénatale</label>
+                                <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="edit_services_specifiques" value="Soins infirmiers"> 🩺 Soins infirmiers</label>
+                                <label style="font-size:12px; cursor:pointer;"><input type="checkbox" name="edit_services_specifiques" value="Ophtalmologie"> 👁️ Ophtalmologie</label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="grille-2">
-                        <div class="champ-groupe"><label>Téléphone</label><input type="tel" id="edit_telephone" required></div>
-                        <div class="champ-groupe"><label>Date d'entrée</label><input type="date" id="edit_date_entree" required></div>
+
+                    <!-- BLOC DYNAMIQUE RDV SPÉCIALISTE (ÉDITION) -->
+                    <div id="edit_bloc_rdv_specialiste" class="grille-2" style="display:none; margin-top:12px; background:rgba(2,132,199,0.06); padding:10px; border-radius:8px; border:1px solid #BAE6FD;">
+                        <div class="champ-groupe">
+                            <label style="color:#0284C7; font-weight:bold;">📅 Date du RDV Spécialiste</label>
+                            <input type="date" id="edit_date_rdv_specialiste">
+                        </div>
+                        <div class="champ-groupe">
+                            <label style="color:#0284C7; font-weight:bold;">⏰ Horaire du RDV (Heure)</label>
+                            <input type="time" id="edit_heure_rdv_specialiste">
+                        </div>
                     </div>
-                    <div class="champ-groupe"><label>Adresse complète</label><input type="text" id="edit_adresse"></div>
-                    <div class="champ-groupe"><label>Contact Urgence</label><input type="text" id="edit_contact_urgence"></div>
+                </div>
+
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Adresse</label><input type="text" id="edit_adresse"></div>
+                    <div class="champ-groupe"><label>Contact d'urgence</label><input type="text" id="edit_contact_urgence"></div>
                 </div>
 
                 <div class="section-form-bloc">
-                    <h3 class="titre-bloc-form rouge">🩺 Antécédents</h3>
+                    <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS MÉDICAUX</div>
                     <div class="grille-2">
-                        <div class="champ-groupe"><label style="color: #DC2626;">⚠️ Allergies</label><input type="text" id="edit_allergies"></div>
+                        <div class="champ-groupe"><label>Allergies</label><input type="text" id="edit_allergies"></div>
                         <div class="champ-groupe"><label>Maladies chroniques</label><input type="text" id="edit_maladies_chroniques"></div>
-                    </div>
-                    <div class="grille-2">
                         <div class="champ-groupe"><label>Chirurgies</label><input type="text" id="edit_chirurgies"></div>
                         <div class="champ-groupe"><label>Traitements en cours</label><input type="text" id="edit_traitements_en_cours"></div>
                     </div>
                 </div>
 
                 <div class="section-form-bloc">
-                    <h3 class="titre-bloc-form vert">📋 Suivi Clinique</h3>
-                    <div class="champ-groupe"><label>Motif de la visite</label><textarea id="edit_motif_visite" rows="2"></textarea></div>
-                    <div class="champ-groupe"><label>Diagnostic / Avis médical</label><textarea id="edit_diagnostic" rows="2"></textarea></div>
-                    <div class="grille-2">
-                        <div class="champ-groupe"><label>Prochain rendez-vous</label><input type="date" id="edit_prochain_rdv"></div>
-                        <div class="champ-groupe"><label>Statut Consultation</label><select id="edit_consultation_statut" required><option value="Non payé">🔴 Non payé</option><option value="Payé">🟢 Payé</option></select></div>
+                    <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
+                    <div class="champ-groupe"><label>Motif</label><textarea id="edit_motif_visite" rows="2"></textarea></div>
+                    <div class="champ-groupe"><label>Diagnostic</label><textarea id="edit_diagnostic" rows="2"></textarea></div>
+                    <div class="grille-vitals">
+                        <div class="champ-groupe"><label>Temp</label><input type="text" id="edit_vit_temp"></div>
+                        <div class="champ-groupe"><label>Poids</label><input type="text" id="edit_vit_poids"></div>
+                        <div class="champ-groupe"><label>Pouls</label><input type="text" id="edit_vit_pouls"></div>
+                        <div class="champ-groupe"><label>Sys</label><input type="text" id="edit_vit_sys"></div>
+                        <div class="champ-groupe"><label>Dia</label><input type="text" id="edit_vit_dia"></div>
                     </div>
-                    <div class="champ-groupe"><label>Contrôle requis ?</label><select id="edit_besoin_controle" required><option value="Non">❌ Non</option><option value="Oui">⚠️ Oui</option></select></div>
                 </div>
 
-                <h3 style="margin-top: 15px; font-size: 14px; color: var(--vert-soin); border-bottom: 1px solid var(--bordure); padding-bottom: 5px;">📊 Paramètres Vitaux</h3>
-                <div class="grille-vitals">
-                    <div class="champ-groupe"><label>Température (°C)</label><input type="number" id="edit_vit_temp" step="0.1"></div>
-                    <div class="champ-groupe"><label>Poids (kg)</label><input type="number" id="edit_vit_poids" step="0.1"></div>
-                    <div class="champ-groupe"><label>Pouls (bpm)</label><input type="number" id="edit_vit_pouls"></div>
-                    <div class="champ-groupe"><label>Tension (mmHg)</label><div style="display: flex; gap: 5px;"><input type="number" id="edit_vit_sys" placeholder="Sys" style="flex: 1;"><input type="number" id="edit_vit_dia" placeholder="Dia" style="flex: 1;"></div></div>
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Prochain RDV</label><input type="date" id="edit_prochain_rdv"></div>
+                    <div class="champ-groupe">
+                        <label>Statut</label>
+                        <select id="edit_consultation_statut">
+                            <option value="Payé">Payé</option>
+                            <option value="Non payé">Non payé</option>
+                        </select>
+                    </div>
+                    <div class="champ-groupe">
+                        <label>Contrôle Requis</label>
+                        <select id="edit_besoin_controle">
+                            <option value="Non">Non</option>
+                            <option value="Oui">Oui</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="champ-groupe" style="margin-top: 10px;"><label>Notes médicales</label><textarea id="edit_notes" rows="2"></textarea></div>
-                
-                <button type="submit" class="btn-principal" style="background-color: var(--vert-soin); margin-top: 15px;">Sauvegarder les modifications</button>
+
+                <div class="champ-groupe"><label>Notes</label><textarea id="edit_notes" rows="2"></textarea></div>
+                <button type="submit" class="btn-principal" style="margin-top:15px; background:#0D9488;">Sauvegarder</button>
             </form>
         </div>
     </div>
 
+    <script src="app.js"></script>
 </body>
 </html>
