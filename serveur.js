@@ -1,27 +1,28 @@
 // =========================================================================
 // FICHIER : serveur.js
-// Rôle : Backend Node.js, Base SQLite3 & Module Inventaire Pharmacie TPFV
+// Rôle : Backend Node.js, SQLite3, Patients, Inventaire & Sécurité TPFV
 // =========================================================================
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const db = new sqlite3.Database('clinique.db');
 
-// --- 1. INITIALISATION DES TABLES ET COMPTES UTILISATEURS ---
+// --- 1. INITIALISATION DES TABLES DE LA BASE DE DONNÉES ---
 db.run(`CREATE TABLE IF NOT EXISTS Utilisateurs (
     role TEXT PRIMARY KEY,
     mot_de_passe TEXT NOT NULL
 )`, () => {
-    db.run("INSERT OR IGNORE INTO Utilisateurs (role, mot_de_passe) VALUES ('agent', 'agent123')");
-    db.run("INSERT OR IGNORE INTO Utilisateurs (role, mot_de_passe) VALUES ('support', 'sup123')");
-    db.run("INSERT OR IGNORE INTO Utilisateurs (role, mot_de_passe) VALUES ('admin', 'secret123')");
+    db.run("INSERT INTO Utilisateurs (role, mot_de_passe) VALUES ('agent', 'agent123') ON CONFLICT(role) DO UPDATE SET mot_de_passe = 'agent123'");
+    db.run("INSERT INTO Utilisateurs (role, mot_de_passe) VALUES ('support', 'sup123') ON CONFLICT(role) DO UPDATE SET mot_de_passe = 'sup123'");
+    db.run("INSERT INTO Utilisateurs (role, mot_de_passe) VALUES ('admin', 'secret123') ON CONFLICT(role) DO UPDATE SET mot_de_passe = 'secret123'");
 });
 
 db.run(`CREATE TABLE IF NOT EXISTS Patients (
@@ -58,7 +59,6 @@ db.run(`CREATE TABLE IF NOT EXISTS Patients (
     });
 });
 
-// TABLE INVENTAIRE ENRICHIE AVEC LA LOGIQUE DE VOTRE FICHIER EXCEL
 db.run(`CREATE TABLE IF NOT EXISTS Inventaire (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nom_medicament TEXT NOT NULL,
@@ -79,46 +79,49 @@ db.run(`CREATE TABLE IF NOT EXISTS Inventaire (
         db.run("ALTER TABLE Inventaire ADD COLUMN prix_unitaire REAL DEFAULT 0", () => {});
         db.run("ALTER TABLE Inventaire ADD COLUMN seuil_alerte INTEGER DEFAULT 5", () => {});
         
-        // Pré-remplissage avec des médicaments réels extraits du fichier Excel
         db.get("SELECT COUNT(*) as count FROM Inventaire", (err, row) => {
             if (row && row.count === 0) {
-                const produitsExcel = [
-                    { nom_medicament: "10cc", date_peremption: "2030-11-01", stock_initial: 1, entrees: 188, sorties: 181, quantite: 8, prix_unitaire: 400, seuil_alerte: 10, description: "Seringue 10cc" },
-                    { nom_medicament: "20cc", date_peremption: "2028-02-01", stock_initial: 3, entrees: 0, sorties: 0, quantite: 3, prix_unitaire: 700, seuil_alerte: 5, description: "Seringue 20cc" },
-                    { nom_medicament: "2cc", date_peremption: "2029-12-01", stock_initial: 5, entrees: 5, sorties: 6, quantite: 4, prix_unitaire: 300, seuil_alerte: 5, description: "Seringue 2cc" },
-                    { nom_medicament: "5cc", date_peremption: "2026-03-01", stock_initial: 2, entrees: 0, sorties: 2, quantite: 0, prix_unitaire: 300, seuil_alerte: 5, description: "Seringue 5cc" },
-                    { nom_medicament: "60cc", date_peremption: "2028-02-01", stock_initial: 0, entrees: 0, sorties: 0, quantite: 0, prix_unitaire: 1000, seuil_alerte: 2, description: "Seringue gavage 60cc" },
-                    { nom_medicament: "acarbose 50mg", date_peremption: "2027-05-01", stock_initial: 6, entrees: 0, sorties: 0, quantite: 6, prix_unitaire: 3200, seuil_alerte: 5, description: "Comprimé oral" },
-                    { nom_medicament: "acide aminé inj", date_peremption: "2028-04-01", stock_initial: 1, entrees: 0, sorties: 1, quantite: 0, prix_unitaire: 10300, seuil_alerte: 2, description: "Solution injectable" },
-                    { nom_medicament: "acupan inj", date_peremption: "2027-12-01", stock_initial: 2, entrees: 0, sorties: 0, quantite: 2, prix_unitaire: 5000, seuil_alerte: 5, description: "Néfopam injectable" },
-                    { nom_medicament: "adrenaline inj", date_peremption: "2026-05-01", stock_initial: 3, entrees: 0, sorties: 0, quantite: 3, prix_unitaire: 4900, seuil_alerte: 3, description: "Ampoule 1mg/ml" },
-                    { nom_medicament: "aiguille rose", date_peremption: "2028-04-01", stock_initial: 5, entrees: 0, sorties: 1, quantite: 4, prix_unitaire: 200, seuil_alerte: 10, description: "Aiguille de prélèvement 18G" },
-                    { nom_medicament: "alben cpr", date_peremption: "2028-08-01", stock_initial: 10, entrees: 60, sorties: 59, quantite: 11, prix_unitaire: 800, seuil_alerte: 10, description: "Albendazole 400mg" },
-                    { nom_medicament: "alben sp", date_peremption: "2028-09-01", stock_initial: 2, entrees: 11, sorties: 11, quantite: 2, prix_unitaire: 2600, seuil_alerte: 5, description: "Albendazole sirop" },
-                    { nom_medicament: "AMADAY 10 /cpr", date_peremption: "2027-10-01", stock_initial: 16, entrees: 0, sorties: 0, quantite: 16, prix_unitaire: 2500, seuil_alerte: 5, description: "Amlodipine 10mg" },
-                    { nom_medicament: "amlopres 10", date_peremption: "2028-08-01", stock_initial: 0, entrees: 15, sorties: 12, quantite: 3, prix_unitaire: 2600, seuil_alerte: 5, description: "Amlodipine 10mg" },
-                    { nom_medicament: "amlopres 5", date_peremption: "2028-08-01", stock_initial: 1, entrees: 7, sorties: 5, quantite: 3, prix_unitaire: 2000, seuil_alerte: 5, description: "Amlodipine 5mg" }
-                ];
-                const stmt = db.prepare(`INSERT INTO Inventaire 
-                    (nom_medicament, date_peremption, stock_initial, entrees, sorties, quantite, prix_unitaire, seuil_alerte, description) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-                produitsExcel.forEach(p => {
-                    stmt.run(p.nom_medicament, p.date_peremption, p.stock_initial, p.entrees, p.sorties, p.quantite, p.prix_unitaire, p.seuil_alerte, p.description);
-                });
-                stmt.finalize();
+                const jsonPath = path.join(__dirname, 'produits_excel.json');
+                if (fs.existsSync(jsonPath)) {
+                    try {
+                        const produitsExcel = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                        const stmt = db.prepare(`INSERT INTO Inventaire 
+                            (nom_medicament, date_peremption, stock_initial, entrees, sorties, quantite, prix_unitaire, seuil_alerte, description) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+                        
+                        db.serialize(() => {
+                            produitsExcel.forEach(p => {
+                                stmt.run(
+                                    p.nom_medicament, p.date_peremption || '', p.stock_initial || 0,
+                                    p.entrees || 0, p.sorties || 0, p.quantite || 0, p.prix_unitaire || 0,
+                                    p.seuil_alerte || 5, p.description || 'Pharmacie TPFV'
+                                );
+                            });
+                            stmt.finalize();
+                        });
+                    } catch (e) {}
+                }
             }
         });
     });
 });
 
-// --- 2. AUTHENTIFICATION & SÉCURITÉ ---
+// --- 2. AUTHENTIFICATION ---
 app.post('/api/login', (req, res) => {
     try {
         const { role, mot_de_passe } = req.body;
-        db.get("SELECT * FROM Utilisateurs WHERE role = ? AND mot_de_passe = ?", [role, mot_de_passe], (err, utilisateur) => {
-            if (err) return res.status(500).json({ erreur: err.message });
-            if (utilisateur) res.json({ message: "Connexion réussie !" });
-            else res.status(401).json({ erreur: "Mot de passe incorrect." });
+        const roleClean = (role || '').trim().toLowerCase();
+        const mdpClean = (mot_de_passe || '').trim();
+
+        db.get("SELECT * FROM Utilisateurs WHERE role = ?", [roleClean], (err, utilisateur) => {
+            if (err) return res.status(500).json({ erreur: "Erreur BDD : " + err.message });
+            if (!utilisateur) return res.status(401).json({ erreur: "Rôle introuvable." });
+
+            if (utilisateur.mot_de_passe === mdpClean) {
+                res.json({ message: "Connexion réussie !" });
+            } else {
+                res.status(401).json({ erreur: "Mot de passe incorrect." });
+            }
         });
     } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
@@ -181,40 +184,67 @@ app.get('/api/patients', (req, res) => {
 });
 
 app.post('/api/patients', (req, res) => {
-    const { 
-        nom_complet, date_entree, date_naissance, sexe, telephone, adresse,
-        contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
-        motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, parametres, notes 
-    } = req.body; 
-
-    if (!nom_complet || !telephone) return res.status(400).json({ erreur: "Champs obligatoires manquants." });
-
-    let dateFormatee = "00000000";
-    if (date_entree && date_entree.includes('-')) {
-        const parties = date_entree.split('-');
-        if (parties.length === 3) dateFormatee = `${parties[2]}${parties[1]}${parties[0]}`;
-    }
-
-    db.get("SELECT COUNT(*) as nombre FROM Patients WHERE date_entree = ?", [date_entree], (err, resultat) => {
-        const count = (resultat && resultat.nombre) ? resultat.nombre : 0;
-        const numero = (count + 1).toString().padStart(3, '0');
-        const code_patient = `${dateFormatee}${numero}`;
-
-        const requete = `INSERT INTO Patients (
-            code_patient, nom_complet, date_entree, date_naissance, sexe, telephone, adresse,
+    try {
+        const { 
+            nom_complet, date_entree, date_naissance, sexe, telephone, adresse,
             contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
-            motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, parametres, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, parametres, notes 
+        } = req.body; 
 
-        db.run(requete, [
-            code_patient, nom_complet.trim(), date_entree, date_naissance, sexe, telephone.trim(), adresse,
-            contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
-            motif_visite, diagnostic, prochain_rdv, consultation_statut || 'Non payé', besoin_controle || 'Non', parametres, notes
-        ], function(err) {
-            if (err) return res.status(400).json({ erreur: err.message });
-            res.json({ id: this.lastID, message: "Dossier créé !" });
-        });
-    });
+        if (!nom_complet || !nom_complet.trim() || !telephone || !telephone.trim()) {
+            return res.status(400).json({ erreur: "Le nom complet et le numéro de téléphone sont obligatoires." });
+        }
+
+        db.get(
+            "SELECT * FROM Patients WHERE telephone = ? OR (nom_complet = ? AND date_naissance = ?)", 
+            [telephone.trim(), nom_complet.trim(), date_naissance], 
+            (err, patientExiste) => {
+                if (err) return res.status(500).json({ erreur: err.message });
+                if (patientExiste) {
+                    if (patientExiste.telephone === telephone.trim()) {
+                        return res.status(400).json({ erreur: `Le téléphone (${telephone}) appartient déjà à ${patientExiste.nom_complet}.` });
+                    }
+                    if (date_naissance && patientExiste.nom_complet === nom_complet.trim()) {
+                        return res.status(400).json({ erreur: `Un dossier existe déjà pour ${nom_complet}.` });
+                    }
+                }
+
+                let dateFormatee = "00000000";
+                if (date_entree && date_entree.includes('-')) {
+                    const parties = date_entree.split('-');
+                    if (parties.length === 3) dateFormatee = `${parties[2]}${parties[1]}${parties[0]}`;
+                }
+
+                const prefixe = `${dateFormatee}%`;
+                db.get("SELECT code_patient FROM Patients WHERE code_patient LIKE ? ORDER BY code_patient DESC LIMIT 1", [prefixe], (err, dernierPatient) => {
+                    let dernierNumero = 0;
+                    if (dernierPatient && dernierPatient.code_patient) {
+                        const suffixe = dernierPatient.code_patient.slice(-3);
+                        const numParsed = parseInt(suffixe, 10);
+                        if (!isNaN(numParsed)) dernierNumero = numParsed;
+                    }
+
+                    const nouveauNumero = (dernierNumero + 1).toString().padStart(3, '0');
+                    const code_patient = `${dateFormatee}${nouveauNumero}`;
+
+                    const requete = `INSERT INTO Patients (
+                        code_patient, nom_complet, date_entree, date_naissance, sexe, telephone, adresse,
+                        contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
+                        motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, parametres, notes
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+                    db.run(requete, [
+                        code_patient, nom_complet.trim(), date_entree, date_naissance, sexe, telephone.trim(), adresse,
+                        contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
+                        motif_visite, diagnostic, prochain_rdv, consultation_statut || 'Non payé', besoin_controle || 'Non', parametres, notes
+                    ], function(err) {
+                        if (err) return res.status(400).json({ erreur: err.message });
+                        res.json({ id: this.lastID, message: "Dossier médical créé avec succès !" });
+                    });
+                });
+            }
+        );
+    } catch (error) { res.status(500).json({ erreur: error.message }); }
 });
 
 app.put('/api/patients/:id', (req, res) => {
@@ -248,7 +278,59 @@ app.delete('/api/patients/:id', (req, res) => {
     });
 });
 
-// --- 4. ROUTES COMPLÈTES DE L'INVENTAIRE (CRUD + MOUVEMENTS + CALCULS) ---
+// IMPORTATION GROUPÉE DE PATIENTS
+app.post('/api/patients/import', (req, res) => {
+    try {
+        const patientsImportes = req.body;
+        if (!Array.isArray(patientsImportes) || patientsImportes.length === 0) {
+            return res.status(400).json({ erreur: "Le fichier ne contient aucun dossier valide." });
+        }
+
+        let nbAjoutes = 0;
+        let nbIgnores = 0;
+
+        db.serialize(() => {
+            const stmt = db.prepare(`INSERT OR IGNORE INTO Patients (
+                code_patient, nom_complet, date_entree, date_naissance, sexe, telephone, adresse,
+                contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours,
+                motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, parametres, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+            patientsImportes.forEach((p, idx) => {
+                const nom = p.nom_complet || p['Nom et Prénom'] || p['Nom'] || p['nom_complet'];
+                const tel = p.telephone || p['Téléphone'] || p['telephone'] || `0000${idx}`;
+
+                if (nom && String(nom).trim()) {
+                    const dateToday = new Date().toISOString().slice(0, 10);
+                    const dateEntree = p.date_entree || p["Date d'entrée"] || dateToday;
+                    const code = p.code_patient || p['Code Patient'] || (`IMP${Date.now()}${idx}`);
+
+                    stmt.run([
+                        String(code).trim(), String(nom).trim(), String(dateEntree).trim(),
+                        String(p.date_naissance || p['Date de naissance'] || '').trim(),
+                        String(p.sexe || p['Sexe'] || 'Masculin').trim(), String(tel).trim(),
+                        String(p.adresse || p['Adresse'] || '').trim(), String(p.contact_urgence || p['Contact Urgence'] || '').trim(),
+                        String(p.allergies || p['Allergies'] || '').trim(), String(p.maladies_chroniques || p['Maladies chroniques'] || '').trim(),
+                        String(p.chirurgies || p['Chirurgies'] || '').trim(), String(p.traitements_en_cours || p['Traitements en cours'] || '').trim(),
+                        String(p.motif_visite || p['Motif de la visite'] || '').trim(), String(p.diagnostic || p['Diagnostic'] || '').trim(),
+                        String(p.prochain_rdv || p['Prochain RDV'] || '').trim(), String(p.consultation_statut || p['Statut Consultation'] || 'Non payé').trim(),
+                        String(p.besoin_controle || p['Contrôle Requis'] || 'Non').trim(), String(p.parametres || ''), String(p.notes || p['Notes'] || '').trim()
+                    ], function(err) {
+                        if (!err && this.changes > 0) nbAjoutes++;
+                        else nbIgnores++;
+                    });
+                } else { nbIgnores++; }
+            });
+
+            stmt.finalize((err) => {
+                if (err) return res.status(500).json({ erreur: err.message });
+                res.json({ message: `Importation terminée ! ${nbAjoutes} dossier(s) ajouté(s), ${nbIgnores} ignoré(s).` });
+            });
+        });
+    } catch (error) { res.status(500).json({ erreur: "Erreur serveur : " + error.message }); }
+});
+
+// --- 4. ROUTES INVENTAIRE ---
 app.get('/api/inventaire', (req, res) => {
     db.all("SELECT * FROM Inventaire ORDER BY nom_medicament ASC", [], (err, lignes) => {
         if (err) return res.status(500).json({ erreur: err.message });
@@ -263,23 +345,10 @@ app.post('/api/inventaire', (req, res) => {
     const sor = parseInt(sorties, 10) || 0;
     const reste = Math.max(0, s_init + ent - sor);
 
-    const requete = `INSERT INTO Inventaire 
-        (nom_medicament, date_peremption, stock_initial, entrees, sorties, quantite, prix_unitaire, seuil_alerte, description) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    db.run(requete, [
-        nom_medicament.trim(), 
-        date_peremption || '', 
-        s_init, 
-        ent, 
-        sor, 
-        reste, 
-        parseFloat(prix_unitaire) || 0, 
-        parseInt(seuil_alerte, 10) || 5, 
-        description || ''
-    ], function(err) {
+    const requete = `INSERT INTO Inventaire (nom_medicament, date_peremption, stock_initial, entrees, sorties, quantite, prix_unitaire, seuil_alerte, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(requete, [nom_medicament.trim(), date_peremption || '', s_init, ent, sor, reste, parseFloat(prix_unitaire) || 0, parseInt(seuil_alerte, 10) || 5, description || ''], function(err) {
         if (err) return res.status(400).json({ erreur: err.message });
-        res.json({ id: this.lastID, message: "Produit créé avec succès !" });
+        res.json({ id: this.lastID, message: "Produit créé !" });
     });
 });
 
@@ -291,34 +360,19 @@ app.put('/api/inventaire/:id', (req, res) => {
     const sor = parseInt(sorties, 10) || 0;
     const reste = Math.max(0, s_init + ent - sor);
 
-    const requete = `UPDATE Inventaire SET 
-        nom_medicament = ?, date_peremption = ?, stock_initial = ?, entrees = ?, sorties = ?, quantite = ?, 
-        prix_unitaire = ?, seuil_alerte = ?, description = ? WHERE id = ?`;
-
-    db.run(requete, [
-        nom_medicament.trim(), 
-        date_peremption || '', 
-        s_init, 
-        ent, 
-        sor, 
-        reste, 
-        parseFloat(prix_unitaire) || 0, 
-        parseInt(seuil_alerte, 10) || 5, 
-        description || '', 
-        idProduit
-    ], function(err) {
+    const requete = `UPDATE Inventaire SET nom_medicament = ?, date_peremption = ?, stock_initial = ?, entrees = ?, sorties = ?, quantite = ?, prix_unitaire = ?, seuil_alerte = ?, description = ? WHERE id = ?`;
+    db.run(requete, [nom_medicament.trim(), date_peremption || '', s_init, ent, sor, reste, parseFloat(prix_unitaire) || 0, parseInt(seuil_alerte, 10) || 5, description || '', idProduit], function(err) {
         if (err) return res.status(500).json({ erreur: err.message });
-        res.json({ message: "Produit mis à jour avec succès !" });
+        res.json({ message: "Produit mis à jour !" });
     });
 });
 
-// Enregistrement rapide d'un mouvement de stock (+ Entrée ou - Sortie)
 app.put('/api/inventaire/:id/mouvement', (req, res) => {
     const idProduit = req.params.id;
     const { type, quantite_mouvement } = req.body;
     const qte = parseInt(quantite_mouvement, 10) || 0;
 
-    if (qte <= 0) return res.status(400).json({ erreur: "La quantité doit être supérieure à 0." });
+    if (qte <= 0) return res.status(400).json({ erreur: "Quantité invalide." });
 
     db.get("SELECT * FROM Inventaire WHERE id = ?", [idProduit], (err, prod) => {
         if (err || !prod) return res.status(404).json({ erreur: "Produit non trouvé." });
@@ -331,19 +385,20 @@ app.put('/api/inventaire/:id/mouvement', (req, res) => {
 
         const reste = Math.max(0, (prod.stock_initial || 0) + nouveauxEntrees - nouvellesSorties);
 
-        db.run("UPDATE Inventaire SET entrees = ?, sorties = ?, quantite = ? WHERE id = ?", 
-            [nouveauxEntrees, nouvellesSorties, reste, idProduit], function(err) {
-                if (err) return res.status(500).json({ erreur: err.message });
-                res.json({ message: `Mouvement de stock enregistré (${type} de ${qte}) !`, quantite: reste });
-            });
+        db.run("UPDATE Inventaire SET entrees = ?, sorties = ?, quantite = ? WHERE id = ?", [nouveauxEntrees, nouvellesSorties, reste, idProduit], function(err) {
+            if (err) return res.status(500).json({ erreur: err.message });
+            res.json({ message: `Mouvement enregistré (${type} de ${qte}) !`, quantite: reste });
+        });
     });
 });
 
 app.delete('/api/inventaire/:id', (req, res) => {
     db.run("DELETE FROM Inventaire WHERE id = ?", [req.params.id], function(err) {
         if (err) return res.status(500).json({ erreur: err.message });
-        res.json({ message: "Produit supprimé de l'inventaire !" });
+        res.json({ message: "Produit supprimé !" });
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => { console.log(`Serveur TPFV prêt sur http://localhost:${PORT}`); });
+app.listen(PORT, '0.0.0.0', () => { 
+    console.log(`🚀 Serveur TPFV prêt sur http://localhost:${PORT}`); 
+});

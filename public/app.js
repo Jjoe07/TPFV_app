@@ -1,15 +1,12 @@
 // =========================================================================
 // FICHIER : app.js
-// Rôle : Client TPFV, Sécurisation Onglets (Inventaire réservé Admin)
+// Rôle : Client TPFV, Fiches A4 HD (1 Page A4 Intégrale), Dates en Lettres
 // =========================================================================
 
 let tousLesPatients = []; 
 let patientsFiltresGlobaux = []; 
 let pageActuelle = 1;
 const patientsParPage = 10; 
-
-let tousLesProduits = [];
-let produitsFiltresGlobaux = [];
 let roleActuel = ''; 
 
 // --- 1. THÈME & ALERTES POP-UP ---
@@ -50,29 +47,41 @@ function afficherAlerte(titre, message, type = 'info') {
     });
 }
 
-function formaterDateEtAge(dateString) {
+// FORMATAGE DES DATES EN LETTRES (EX: 23 DÉCEMBRE 1999) SANS CALCUL D'ÂGE
+function formaterDateEnLettres(dateString) {
     if (!dateString) return 'Non renseignée';
-    const parties = dateString.split('-');
-    if (parties.length !== 3) return dateString;
-    const [annee, mois, jour] = parties;
+    
+    let year, month, day;
 
-    const dateNaissance = new Date(annee, mois - 1, jour);
-    const aujourdhui = new Date();
-    let age = aujourdhui.getFullYear() - dateNaissance.getFullYear();
-    const m = aujourdhui.getMonth() - dateNaissance.getMonth();
-    if (m < 0 || (m === 0 && aujourdhui.getDate() < dateNaissance.getDate())) {
-        age--;
+    if (dateString.includes('-')) {
+        const parties = dateString.split('-');
+        if (parties.length === 3) [year, month, day] = parties;
+    } else if (dateString.includes('/')) {
+        const parties = dateString.split('/');
+        if (parties.length === 3) [day, month, year] = parties;
     }
 
-    const dateFormatee = `${jour.padStart(2, '0')}/${mois.padStart(2, '0')}/${annee}`;
-    return `${dateFormatee} (${age} ans)`;
+    if (!year || !month || !day) return dateString;
+
+    const moisLettres = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ];
+
+    const moisIndex = parseInt(month, 10) - 1;
+    if (moisIndex < 0 || moisIndex >= 12) return dateString;
+
+    const jourNumero = parseInt(day, 10).toString().padStart(2, '0');
+    const nomMois = moisLettres[moisIndex];
+
+    return `${jourNumero} ${nomMois} ${year}`;
 }
 
-function formaterAriary(montant) {
-    return new Intl.NumberFormat('fr-FR').format(Math.round(montant || 0)) + ' Ar';
+function formaterDateEtAge(dateString) {
+    return formaterDateEnLettres(dateString);
 }
 
-// --- 2. GESTION DES RÔLES ET ACCÈS SÉCURISÉS ---
+// --- 2. GESTION DES RÔLES ET ACCÈS ---
 function appliquerDroitsRole(role) {
     roleActuel = role;
     
@@ -95,14 +104,13 @@ function appliquerDroitsRole(role) {
     const champsMedicaux = document.getElementById('champs-medicaux'); 
     const btnTheme = document.getElementById('btn-theme'); 
     
-    // VERROUILLAGE SÉCURITÉ : AGENT ET SUPPORT N'ONT PAS ACCÈS À L'INVENTAIRE
     if (roleActuel === 'agent' || roleActuel === 'support') {
-        if (btnInventaire) btnInventaire.style.display = 'none'; // MASQUÉ !
+        if (btnInventaire) btnInventaire.style.display = 'none';
         if (btnParametres) btnParametres.style.display = 'none';
         if (btnCompte) btnCompte.style.display = 'none';
         changerOnglet('patients'); 
     } else if (roleActuel === 'admin') {
-        if (btnInventaire) btnInventaire.style.display = 'block'; // AUTORISÉ UNIQUEMENT AUX ADMINS !
+        if (btnInventaire) btnInventaire.style.display = 'block';
         if (btnParametres) btnParametres.style.display = 'block';
         if (btnCompte) btnCompte.style.display = 'block';
     }
@@ -125,11 +133,6 @@ function appliquerDroitsRole(role) {
     }
     
     chargerPatients();
-    
-    // CHARGER L'INVENTAIRE UNIQUEMENT POUR L'ADMIN
-    if (roleActuel === 'admin') {
-        chargerInventaire();
-    }
 }
 
 async function seConnecter() {
@@ -137,15 +140,21 @@ async function seConnecter() {
     const mdpSaisi = document.getElementById('mot-de-passe').value;
     if (!mdpSaisi) return afficherAlerte("Champs requis", "Veuillez entrer votre mot de passe.", "info");
     try {
-        const reponse = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: roleSaisi, mot_de_passe: mdpSaisi }) });
+        const reponse = await fetch('/api/login', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ role: roleSaisi, mot_de_passe: mdpSaisi.trim() }) 
+        });
+        const data = await reponse.json();
         if (!reponse.ok) {
-            const err = await reponse.json().catch(() => ({erreur: "Mot de passe incorrect."}));
-            return afficherAlerte("Accès refusé", err.erreur, "erreur");
+            return afficherAlerte("Accès refusé", data.erreur || "Mot de passe incorrect.", "erreur");
         }
         localStorage.setItem('sessionCliniqueRole', roleSaisi);
         appliquerDroitsRole(roleSaisi);
         document.getElementById('mot-de-passe').value = '';
-    } catch (erreur) { afficherAlerte("Erreur réseau", "Impossible de joindre le serveur.", "erreur"); }
+    } catch (erreur) { 
+        afficherAlerte("Erreur réseau", "Impossible de joindre le serveur. Lancez `node serveur.js` dans le terminal.", "erreur"); 
+    }
 }
 
 function seDeconnecter() {
@@ -266,74 +275,52 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // SOUMISSION PRODUIT INVENTAIRE
-    const formInv = document.getElementById('formProduitInventaire');
-    if (formInv) {
-        formInv.addEventListener('submit', async function(e) {
+    // FORMULAIRE IMPORTATION PATIENTS
+    const formImport = document.getElementById('formImportPatients');
+    if (formImport) {
+        formImport.addEventListener('submit', function(e) {
             e.preventDefault();
-            const id = document.getElementById('inv_id').value;
-            const produit = {
-                nom_medicament: document.getElementById('inv_nom').value,
-                date_peremption: document.getElementById('inv_dp').value,
-                prix_unitaire: parseFloat(document.getElementById('inv_prix').value) || 0,
-                stock_initial: parseInt(document.getElementById('inv_stock_init').value, 10) || 0,
-                seuil_alerte: parseInt(document.getElementById('inv_seuil').value, 10) || 5,
-                entrees: parseInt(document.getElementById('inv_entrees').value, 10) || 0,
-                sorties: parseInt(document.getElementById('inv_sorties').value, 10) || 0,
-                description: document.getElementById('inv_desc').value
+            const fichierInput = document.getElementById('fichierImport');
+            if (!fichierInput || !fichierInput.files || fichierInput.files.length === 0) {
+                return afficherAlerte("Fichier requis", "Veuillez sélectionner un fichier CSV ou Excel.", "info");
+            }
+
+            const fichier = fichierInput.files[0];
+            const lecteur = new FileReader();
+
+            lecteur.onload = async function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const classeur = XLSX.read(data, { type: 'array' });
+                    const nomFeuille = classeur.SheetNames[0];
+                    const feuille = classeur.Sheets[nomFeuille];
+                    const patientsJSON = XLSX.utils.sheet_to_json(feuille);
+
+                    if (!patientsJSON || patientsJSON.length === 0) {
+                        return afficherAlerte("Fichier vide", "Le fichier ne contient aucun dossier.", "erreur");
+                    }
+
+                    const reponse = await fetch('/api/patients/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patientsJSON)
+                    });
+
+                    const resData = await reponse.json();
+                    if (reponse.ok) {
+                        await afficherAlerte("Importation réussie", resData.message, "succes");
+                        formImport.reset();
+                        await chargerPatients();
+                        afficherStatsMensuelles();
+                    } else {
+                        await afficherAlerte("Erreur Importation", resData.erreur || "Impossible d'importer.", "erreur");
+                    }
+                } catch (err) {
+                    await afficherAlerte("Format invalide", "Erreur fichier : " + err.message, "erreur");
+                }
             };
 
-            const url = id ? `/api/inventaire/${id}` : '/api/inventaire';
-            const methode = id ? 'PUT' : 'POST';
-
-            try {
-                const reponse = await fetch(url, {
-                    method: methode,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(produit)
-                });
-
-                if (reponse.ok) {
-                    await afficherAlerte("Succès", id ? "Produit mis à jour !" : "Produit ajouté à l'inventaire !", "succes");
-                    fermerModalInventaire();
-                    chargerInventaire();
-                } else {
-                    const err = await reponse.json();
-                    await afficherAlerte("Erreur", err.erreur || "Action impossible.", "erreur");
-                }
-            } catch (erreur) {
-                await afficherAlerte("Erreur réseau", "Connexion interrompue.", "erreur");
-            }
-        });
-    }
-
-    // SOUMISSION MOUVEMENT RAPIDE DE STOCK
-    const formMouv = document.getElementById('formMouvementStock');
-    if (formMouv) {
-        formMouv.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const id = document.getElementById('mouv_id').value;
-            const type = document.getElementById('mouv_type').value;
-            const qte = parseInt(document.getElementById('mouv_quantite').value, 10) || 0;
-
-            try {
-                const reponse = await fetch(`/api/inventaire/${id}/mouvement`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: type, quantite_mouvement: qte })
-                });
-
-                if (reponse.ok) {
-                    await afficherAlerte("Succès", `Mouvement enregistré (${type} de ${qte}) !`, "succes");
-                    fermerModalMouvement();
-                    chargerInventaire();
-                } else {
-                    const err = await reponse.json();
-                    await afficherAlerte("Erreur", err.erreur || "Mouvement impossible.", "erreur");
-                }
-            } catch (erreur) {
-                await afficherAlerte("Erreur réseau", "Connexion interrompue.", "erreur");
-            }
+            lecteur.readAsArrayBuffer(fichier);
         });
     }
 
@@ -345,14 +332,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (sessionActive) appliquerDroitsRole(sessionActive);
 });
 
-// --- 5. NAVIGATION ONGLETS AVEC BARRIÈRE DE SÉCURITÉ ---
+// --- 5. NAVIGATION ONGLETS ---
 function changerOnglet(section) {
-    // BARRIÈRE STRICTE : SI NI ADMIN, INTERDIRE L'INVENTAIRE
-    if ((roleActuel === 'agent' || roleActuel === 'support') && section === 'inventaire') {
-        section = 'patients'; // Redirection automatique vers Patients
-    }
-
-    const sections = ['patients', 'inventaire', 'parametres', 'compte'];
+    const sections = ['patients', 'parametres', 'compte'];
     sections.forEach(sec => {
         const elSec = document.getElementById(`section-${sec}`);
         const elBtn = document.getElementById(`btn-${sec}`);
@@ -370,6 +352,10 @@ function changerOnglet(section) {
         activeSec.classList.add('section-visible', 'animate-fade');
     }
     if (activeBtn) activeBtn.classList.add('actif');
+
+    if (section === 'parametres') {
+        afficherStatsMensuelles();
+    }
 }
 
 function changerSousOngletPatients(onglet) {
@@ -393,13 +379,14 @@ function changerSousOngletPatients(onglet) {
     }
 }
 
-// --- 6. CHARGEMENT DONNÉES PATIENTS ---
+// --- 6. CHARGEMENT & AFFICHAGE DES PATIENTS ---
 async function chargerPatients() {
     try {
         const reponse = await fetch('/api/patients');
         if (!reponse.ok) throw new Error();
         tousLesPatients = await reponse.json(); 
         filtrerPatients();
+        afficherStatsMensuelles();
     } catch (e) {}
 }
 
@@ -457,7 +444,7 @@ function afficherPatients(listeAAfficher) {
                     <div><strong>Maladies chroniques :</strong> ${patient.maladies_chroniques || 'Aucune'}</div>
                     <div><strong>Chirurgies antérieures :</strong> ${patient.chirurgies || 'Aucune'}</div>
                     <div><strong>Traitements en cours :</strong> ${patient.traitements_en_cours || 'Aucun'}</div>
-                    <div><strong>Prochain rendez-vous :</strong> ${patient.prochain_rdv ? formaterDateEtAge(patient.prochain_rdv).split(' ')[0] : 'Non planifié'}</div>
+                    <div><strong>Prochain rendez-vous :</strong> ${formaterDateEnLettres(patient.prochain_rdv)}</div>
                 </div>
                 <div style="border-top: 1px solid var(--bordure); padding-top: 8px; margin-top: 8px;">
                     <strong style="color: var(--bleu-primaire);">Motif de la visite :</strong> ${patient.motif_visite || 'Non renseigné'}<br>
@@ -496,9 +483,9 @@ function afficherPatients(listeAAfficher) {
         
         <div class="grille-2" style="font-size: 13px; color: var(--texte-clair); margin-bottom: 8px;">
             <span><strong>Sexe :</strong> ${patient.sexe || 'Non renseigné'}</span>
-            <span><strong>Date de naissance :</strong> ${formaterDateEtAge(patient.date_naissance)}</span>
+            <span><strong>Date de naissance :</strong> ${formaterDateEnLettres(patient.date_naissance)}</span>
             <span><strong>Téléphone :</strong> ${patient.telephone}</span>
-            <span><strong>Entré(e) le :</strong> ${formaterDateEtAge(patient.date_entree).split(' ')[0]}</span>
+            <span><strong>Première entrée :</strong> ${formaterDateEnLettres(patient.date_entree)}</span>
         </div>
         
         <div style="font-size: 13px; border-top: 1px dashed var(--bordure); padding-top: 8px; margin-bottom: 6px;">
@@ -519,373 +506,124 @@ function afficherPatients(listeAAfficher) {
 
 function changerPage(dir) { pageActuelle += dir; afficherPatients(patientsFiltresGlobaux); }
 
-// --- 7. LOGIQUE MODULE INVENTAIRE PHARMACIE ---
-async function chargerInventaire() {
-    if (roleActuel !== 'admin') return; // Bloquer la requête réseau pour les non-admins
-    try {
-        const reponse = await fetch('/api/inventaire');
-        if (!reponse.ok) return;
-        tousLesProduits = await reponse.json();
-        filtrerInventaire();
-    } catch (e) {}
-}
-
-function filtrerInventaire() {
-    const terme = (document.getElementById('recherche-inventaire')?.value || '').toLowerCase().trim();
-    const etat = document.getElementById('filtre-etat-stock')?.value || 'tous';
-    const aujourdhui = new Date();
-
-    produitsFiltresGlobaux = tousLesProduits.filter(p => {
-        const nom = (p.nom_medicament || '').toLowerCase();
-        const desc = (p.description || '').toLowerCase();
-        const correspondNom = !terme || nom.includes(terme) || desc.includes(terme);
-
-        if (!correspondNom) return false;
-
-        const reste = p.quantite || 0;
-        const seuil = p.seuil_alerte || 5;
-
-        let joursAvantDP = 999;
-        if (p.date_peremption) {
-            const dpDate = new Date(p.date_peremption);
-            joursAvantDP = Math.ceil((dpDate - aujourdhui) / (1000 * 60 * 60 * 24));
-        }
-
-        if (etat === 'alerte') return reste <= seuil;
-        if (etat === 'peremption') return joursAvantDP <= 60;
-        if (etat === 'normal') return reste > seuil && joursAvantDP > 60;
-
-        return true;
-    });
-
-    afficherInventaire(produitsFiltresGlobaux);
-}
-
-function afficherInventaire(liste) {
-    const corps = document.getElementById('corpsTableauInventaire');
+// --- 7. STATISTIQUES MENSUELLES ---
+function afficherStatsMensuelles() {
+    const corps = document.getElementById('corpsStatsMensuelles');
     if (!corps) return;
     corps.innerHTML = '';
 
-    let totalArticles = tousLesProduits.length;
-    let valeurTotaleStock = 0;
-    let nbRuptures = 0;
-    let nbPeremptions = 0;
-
-    const aujourdhui = new Date();
-
-    tousLesProduits.forEach(p => {
-        const reste = p.quantite || 0;
-        const pu = p.prix_unitaire || 0;
-        valeurTotaleStock += (reste * pu);
-
-        if (reste <= (p.seuil_alerte || 5)) nbRuptures++;
-
-        if (p.date_peremption) {
-            const dpDate = new Date(p.date_peremption);
-            const jours = Math.ceil((dpDate - aujourdhui) / (1000 * 60 * 60 * 24));
-            if (jours <= 60) nbPeremptions++;
-        }
-    });
-
-    const kpiTotal = document.getElementById('kpi-total-articles');
-    const kpiValeur = document.getElementById('kpi-valeur-stock');
-    const kpiRuptures = document.getElementById('kpi-ruptures');
-    const kpiPeremptions = document.getElementById('kpi-peremptions');
-
-    if (kpiTotal) kpiTotal.innerText = totalArticles;
-    if (kpiValeur) kpiValeur.innerText = formaterAriary(valeurTotaleStock);
-    if (kpiRuptures) kpiRuptures.innerText = nbRuptures;
-    if (kpiPeremptions) kpiPeremptions.innerText = nbPeremptions;
-
-    if (liste.length === 0) {
-        corps.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--texte-clair); padding: 25px;">Aucun produit ne correspond à votre recherche.</td></tr>`;
+    if (!tousLesPatients || tousLesPatients.length === 0) {
+        corps.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--texte-clair); padding: 20px;">Aucun patient enregistré.</td></tr>`;
         return;
     }
 
-    liste.forEach(p => {
-        const tr = document.createElement('tr');
-        const reste = p.quantite || 0;
-        const seuil = p.seuil_alerte || 5;
-        const pu = p.prix_unitaire || 0;
-        const valeurLigne = reste * pu;
+    const moisMap = {};
+    const nomsMois = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-        let badgeStockClass = 'badge-stock-normal';
-        if (reste === 0) badgeStockClass = 'badge-stock-rupture';
-        else if (reste <= seuil) badgeStockClass = 'badge-stock-alerte';
-
-        let badgeDP = 'Non renseignée';
-        let badgeDPClass = 'badge-dp-ok';
-        if (p.date_peremption) {
-            const dpDate = new Date(p.date_peremption);
-            const jours = Math.ceil((dpDate - aujourdhui) / (1000 * 60 * 60 * 24));
-            const dateStr = formaterDateEtAge(p.date_peremption).split(' ')[0];
-
-            if (jours <= 0) {
-                badgeDP = `⚠️ Expiré (${dateStr})`;
-                badgeDPClass = 'badge-dp-expire';
-            } else if (jours <= 60) {
-                badgeDP = `⏳ Expire bientot (${dateStr})`;
-                badgeDPClass = 'badge-dp-alerte';
-            } else {
-                badgeDP = `🟢 ${dateStr}`;
-                badgeDPClass = 'badge-dp-ok';
+    tousLesPatients.forEach(p => {
+        let dateKey = "Date non renseignée";
+        if (p.date_entree && p.date_entree.includes('-')) {
+            const parties = p.date_entree.split('-');
+            if (parties.length === 3) {
+                const annee = parties[0];
+                const moisNum = parseInt(parties[1], 10) - 1;
+                if (moisNum >= 0 && moisNum < 12) {
+                    dateKey = `${annee}-${(moisNum + 1).toString().padStart(2, '0')}`;
+                }
             }
         }
+        moisMap[dateKey] = (moisMap[dateKey] || 0) + 1;
+    });
 
-        let boutonsActionsAdmin = '';
-        if (roleActuel === 'admin' || roleActuel === 'support') {
-            boutonsActionsAdmin = `
-                <button onclick="ouvrirModalEditionProduit(${p.id})" class="btn-inv-icon" title="Modifier la fiche">✏️</button>
-            `;
-        }
-        if (roleActuel === 'admin') {
-            boutonsActionsAdmin += `
-                <button onclick="supprimerProduit(${p.id})" class="btn-inv-icon rouge" title="Supprimer le produit">🗑️</button>
-            `;
+    const moisTries = Object.keys(moisMap).sort().reverse();
+    const totalGlobal = tousLesPatients.length;
+
+    moisTries.forEach(key => {
+        const count = moisMap[key];
+        const pourcentage = Math.round((count / totalGlobal) * 100);
+
+        let libelleMois = key;
+        if (key !== "Date non renseignée" && key.includes('-')) {
+            const [annee, moisStr] = key.split('-');
+            const idxMois = parseInt(moisStr, 10) - 1;
+            libelleMois = `${nomsMois[idxMois]} ${annee}`;
         }
 
+        const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td><strong>📅 ${libelleMois}</strong></td>
+            <td style="text-align: center;"><span class="badge-stock-normal" style="font-size: 13px;">${count} patient(s)</span></td>
+            <td style="text-align: center;"><strong>${pourcentage}%</strong></td>
             <td>
-                <strong>${p.nom_medicament}</strong>
-                ${p.description ? `<br><small style="color: var(--texte-clair);">${p.description}</small>` : ''}
-            </td>
-            <td><span class="${badgeDPClass}">${badgeDP}</span></td>
-            <td><strong>${p.stock_initial || 0}</strong></td>
-            <td style="color: var(--vert-soin); font-weight: bold;">+${p.entrees || 0}</td>
-            <td style="color: #DC2626; font-weight: bold;">-${p.sorties || 0}</td>
-            <td><span class="${badgeStockClass}">${reste}</span></td>
-            <td>${formaterAriary(pu)}</td>
-            <td><strong>${formaterAriary(valeurLigne)}</strong></td>
-            <td style="text-align: center; white-space: nowrap;">
-                <button onclick="ouvrirModalMouvement(${p.id}, 'entrée')" class="btn-mouv vert" title="Réapprovisionnement">+ Entrée</button>
-                <button onclick="ouvrirModalMouvement(${p.id}, 'sortie')" class="btn-mouv rouge" title="Sortie/Vente">- Sortie</button>
-                ${boutonsActionsAdmin}
+                <div style="background: var(--bordure); border-radius: 6px; height: 10px; width: 100%; overflow: hidden;">
+                    <div style="background: var(--bleu-primaire); height: 100%; width: ${Math.min(100, Math.max(5, pourcentage))}%;"></div>
+                </div>
             </td>
         `;
-
         corps.appendChild(tr);
     });
 }
 
-function ouvrirModalAjoutProduit() {
-    document.getElementById('formProduitInventaire').reset();
-    document.getElementById('inv_id').value = '';
-    document.getElementById('titre-modal-inv').innerText = "➕ Ajouter un Nouveau Produit";
-    const modal = document.getElementById('modal-inventaire');
-    if (modal) modal.classList.remove('section-cachee');
+// --- 8. IMPORTATION ET EXPORTATION ---
+function preparerDonneesPatientsExport() {
+    return tousLesPatients.map(p => {
+        let v = { temp: '', poids: '', pouls: '', sys: '', dia: '' };
+        try { if (p.parametres && p.parametres.startsWith('{')) v = JSON.parse(p.parametres); } catch (e) {}
+
+        return {
+            "Code Patient": p.code_patient || '',
+            "Nom et Prénom": p.nom_complet || '',
+            "Sexe": p.sexe || '',
+            "Date de naissance": formaterDateEnLettres(p.date_naissance),
+            "Téléphone": p.telephone || '',
+            "Date d'entrée": formaterDateEnLettres(p.date_entree),
+            "Adresse": p.adresse || '',
+            "Contact Urgence": p.contact_urgence || '',
+            "Allergies": p.allergies || '',
+            "Maladies chroniques": p.maladies_chroniques || '',
+            "Chirurgies": p.chirurgies || '',
+            "Traitements en cours": p.traitements_en_cours || '',
+            "Motif de la visite": p.motif_visite || '',
+            "Diagnostic": p.diagnostic || '',
+            "Prochain RDV": formaterDateEnLettres(p.prochain_rdv),
+            "Statut Consultation": p.consultation_statut || 'Non payé',
+            "Contrôle Requis": p.besoin_controle || 'Non',
+            "Notes": p.notes || ''
+        };
+    });
 }
 
-function ouvrirModalEditionProduit(id) {
-    const p = tousLesProduits.find(item => item.id === id);
-    if (!p) return;
+function exporterPatientsCSV() {
+    if (!tousLesPatients || tousLesPatients.length === 0) return afficherAlerte("Export impossible", "Aucun patient à exporter.", "info");
+    const donnees = preparerDonneesPatientsExport();
+    const enTetes = Object.keys(donnees[0]);
+    let contenuCSV = "\uFEFF" + enTetes.map(h => `"${h}"`).join(";") + "\n";
 
-    document.getElementById('inv_id').value = p.id;
-    document.getElementById('inv_nom').value = p.nom_medicament || '';
-    document.getElementById('inv_dp').value = p.date_peremption || '';
-    document.getElementById('inv_prix').value = p.prix_unitaire || 0;
-    document.getElementById('inv_stock_init').value = p.stock_initial || 0;
-    document.getElementById('inv_seuil').value = p.seuil_alerte || 5;
-    document.getElementById('inv_entrees').value = p.entrees || 0;
-    document.getElementById('inv_sorties').value = p.sorties || 0;
-    document.getElementById('inv_desc').value = p.description || '';
-
-    document.getElementById('titre-modal-inv').innerText = "✏️ Modifier le Produit";
-    const modal = document.getElementById('modal-inventaire');
-    if (modal) modal.classList.remove('section-cachee');
-}
-
-function fermerModalInventaire() {
-    const modal = document.getElementById('modal-inventaire');
-    if (modal) modal.classList.add('section-cachee');
-}
-
-function ouvrirModalMouvement(id, type) {
-    const p = tousLesProduits.find(item => item.id === id);
-    if (!p) return;
-
-    document.getElementById('mouv_id').value = p.id;
-    document.getElementById('mouv_type').value = type;
-    document.getElementById('mouv_quantite').value = 1;
-    document.getElementById('mouv_nom_produit').innerText = `${p.nom_medicament} (Reste actuel : ${p.quantite || 0})`;
-
-    const btnValider = document.getElementById('btn-valider-mouvement');
-    if (type === 'entrée') {
-        document.getElementById('titre-modal-mouvement').innerText = "📥 Réapprovisionnement (+ Entrée)";
-        document.getElementById('label_quantite_mouv').innerText = "Quantité à ajouter au stock";
-        btnValider.style.backgroundColor = "var(--vert-soin)";
-    } else {
-        document.getElementById('titre-modal-mouvement').innerText = "📤 Vente / Sortie de Stock (- Sortie)";
-        document.getElementById('label_quantite_mouv').innerText = "Quantité à retirer du stock";
-        btnValider.style.backgroundColor = "#DC2626";
-    }
-
-    const modal = document.getElementById('modal-mouvement-stock');
-    if (modal) modal.classList.remove('section-cachee');
-}
-
-function fermerModalMouvement() {
-    const modal = document.getElementById('modal-mouvement-stock');
-    if (modal) modal.classList.add('section-cachee');
-}
-
-async function supprimerProduit(id) {
-    if (confirm("⚠️ Êtes-vous sûr de vouloir supprimer définitivement ce produit de l'inventaire ?")) {
-        try {
-            const reponse = await fetch(`/api/inventaire/${id}`, { method: 'DELETE' });
-            if (reponse.ok) {
-                await afficherAlerte("Supprimé", "Produit retiré du stock.", "succes");
-                chargerInventaire();
-            }
-        } catch (e) {
-            await afficherAlerte("Erreur", "Connexion interrompue.", "erreur");
-        }
-    }
-}
-
-// --- 8. RAPPORT D'INVENTAIRE A4 (VISIONNEUSE HD NATIVE) ---
-function imprimerRapportInventaireA4() {
-    let totalArticles = tousLesProduits.length;
-    let valeurTotaleStock = 0;
-
-    let lignesHTML = '';
-    tousLesProduits.forEach((p, idx) => {
-        const reste = p.quantite || 0;
-        const pu = p.prix_unitaire || 0;
-        const val = reste * pu;
-        valeurTotaleStock += val;
-
-        const dpStr = p.date_peremption ? formaterDateEtAge(p.date_peremption).split(' ')[0] : 'N/A';
-
-        lignesHTML += `
-            <tr style="border-bottom: 1px solid #CBD5E1; font-size: 11px;">
-                <td style="padding: 6px;">${idx + 1}</td>
-                <td style="padding: 6px; overflow-wrap: anywhere; word-break: break-all;"><strong>${p.nom_medicament}</strong></td>
-                <td style="padding: 6px; text-align: center;">${dpStr}</td>
-                <td style="padding: 6px; text-align: center;">${p.stock_initial || 0}</td>
-                <td style="padding: 6px; text-align: center; color: #0D9488; font-weight: bold;">+${p.entrees || 0}</td>
-                <td style="padding: 6px; text-align: center; color: #DC2626; font-weight: bold;">-${p.sorties || 0}</td>
-                <td style="padding: 6px; text-align: center; font-weight: bold;">${reste}</td>
-                <td style="padding: 6px; text-align: right;">${formaterAriary(pu)}</td>
-                <td style="padding: 6px; text-align: right; font-weight: bold;">${formaterAriary(val)}</td>
-            </tr>
-        `;
+    donnees.forEach(row => {
+        const ligne = enTetes.map(h => `"${(row[h] !== undefined && row[h] !== null) ? String(row[h]).replace(/"/g, '""') : ''}"`).join(";");
+        contenuCSV += ligne + "\n";
     });
 
-    const fenetre = window.open('', '_blank');
-    if (!fenetre) {
-        return afficherAlerte("Pop-up bloqué", "Veuillez autoriser les fenêtres surgissantes pour voir le rapport.", "info");
-    }
-
-    fenetre.document.write(`
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <title>Rapport_Inventaire_TPFV_${new Date().toISOString().slice(0,10)}</title>
-            <style>
-                @page { size: A4 portrait; margin: 10mm; }
-                body {
-                    font-family: Arial, Helvetica, sans-serif;
-                    color: #0F172A;
-                    background-color: #525659;
-                    margin: 0;
-                    padding: 20px 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .barre-outils-pdf {
-                    position: fixed; top: 0; left: 0; right: 0;
-                    background: #1E293B; color: white; padding: 10px 20px;
-                    display: flex; justify-content: space-between; align-items: center;
-                    z-index: 10000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
-                }
-                .btn-pdf {
-                    background: #0284C7; color: white; border: none;
-                    padding: 8px 16px; border-radius: 6px; font-weight: bold;
-                    cursor: pointer; font-size: 13px;
-                }
-                .btn-pdf:hover { background: #0369A1; }
-                .page-a4 {
-                    background: #FFFFFF; width: 210mm; min-height: 297mm;
-                    padding: 15mm; box-sizing: border-box;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-top: 50px;
-                    overflow: hidden;
-                }
-                @media print {
-                    .barre-outils-pdf { display: none !important; }
-                    body { background: white; padding: 0; }
-                    .page-a4 { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
-                }
-                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                td, th { vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
-            </style>
-        </head>
-        <body>
-            <div class="barre-outils-pdf">
-                <span>📊 <strong>Rapport d'Inventaire Pharmacie TPFV</strong></span>
-                <div>
-                    <button class="btn-pdf" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
-                    <button class="btn-pdf" style="background: #64748B; margin-left: 8px;" onclick="window.close()">❌ Fermer</button>
-                </div>
-            </div>
-
-            <div class="page-a4">
-                <table style="border-bottom: 2px solid #0284C7; padding-bottom: 8px; margin-bottom: 15px;">
-                    <tr>
-                        <td style="width: 65%;">
-                            <h1 style="color: #0284C7; margin: 0; font-size: 22px; font-weight: 800;">🏥 TPFV</h1>
-                            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px; font-weight: 700;">Toeram - Pitsaboana Fanantenan'ny Vononkandresy III Jaona 2</p>
-                        </td>
-                        <td style="width: 35%; text-align: right; font-size: 11px; color: #475569;">
-                            <p style="margin: 0;"><strong>RAPPORT DE VALORISATION</strong></p>
-                            <p style="margin: 4px 0 0 0;">Date : ${new Date().toLocaleDateString('fr-FR')}</p>
-                        </td>
-                    </tr>
-                </table>
-
-                <div style="background: #F0F9FF; border: 1px solid #BAE6FD; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; display: flex; justify-content: space-between;">
-                    <span>Total Références : <strong>${totalArticles}</strong></span>
-                    <span>Valorisation Totale du Stock : <strong style="color: #0D9488;">${formaterAriary(valeurTotaleStock)}</strong></span>
-                </div>
-
-                <table style="border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #0284C7; color: #FFFFFF; font-size: 10px; text-align: left;">
-                            <th style="padding: 6px; width: 5%;">#</th>
-                            <th style="padding: 6px; width: 30%;">Désignation</th>
-                            <th style="padding: 6px; width: 12%; text-align: center;">DP</th>
-                            <th style="padding: 6px; width: 8%; text-align: center;">Init.</th>
-                            <th style="padding: 6px; width: 8%; text-align: center;">Ent.</th>
-                            <th style="padding: 6px; width: 8%; text-align: center;">Sor.</th>
-                            <th style="padding: 6px; width: 9%; text-align: center;">Reste</th>
-                            <th style="padding: 6px; width: 10%; text-align: right;">P.U</th>
-                            <th style="padding: 6px; width: 10%; text-align: right;">Valeur</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${lignesHTML}
-                    </tbody>
-                </table>
-
-                <table style="margin-top: 30px; font-size: 10px; color: #475569;">
-                    <tr>
-                        <td style="width: 60%;">Rapport de stock officiel généré par le logiciel TPFV.</td>
-                        <td style="width: 40%; text-align: right;">
-                            <div style="display: inline-block; text-align: center; border-top: 1px solid #94A3B8; width: 180px; padding-top: 4px;">
-                                <strong>Visa Pharmacien / Resp.</strong>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </body>
-        </html>
-    `);
-    fenetre.document.close();
+    const blob = new Blob([contenuCSV], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.setAttribute('href', url);
+    lien.setAttribute('download', `Patients_TPFV_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(lien);
+    lien.click();
+    document.body.removeChild(lien);
 }
 
-// --- 9. FICHE PATIENT A4 (CORRECTION ANTI-DÉBORDEMENT TEXTE SANS ESPACE) ---
+function exporterPatientsExcel() {
+    if (!tousLesPatients || tousLesPatients.length === 0) return afficherAlerte("Export impossible", "Aucun patient à exporter.", "info");
+    const donnees = preparerDonneesPatientsExport();
+    const feuille = XLSX.utils.json_to_sheet(donnees);
+    const classeur = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(classeur, feuille, "Patients");
+    XLSX.writeFile(classeur, `Patients_TPFV_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// --- 9. FICHE PATIENT A4 PDF (LARGEUR ET HAUTEUR CORRIGÉES - SANS TRONQUATURE ET EN 1 PAGE) ---
 function telechargerFicheA4(id) {
     const patient = tousLesPatients.find(p => p.id === id);
     if (!patient) return;
@@ -903,9 +641,7 @@ function telechargerFicheA4(id) {
     const nomPDFOfficiel = `Fiche_Medicale_${nomFichierFormat}.pdf`;
 
     const fenetre = window.open('', '_blank');
-    if (!fenetre) {
-        return afficherAlerte("Pop-up bloqué", "Veuillez autoriser les fenêtres surgissantes pour voir la fiche.", "info");
-    }
+    if (!fenetre) return afficherAlerte("Pop-up bloqué", "Veuillez autoriser les fenêtres surgissantes.", "info");
 
     fenetre.document.write(`
         <!DOCTYPE html>
@@ -915,49 +651,17 @@ function telechargerFicheA4(id) {
             <title>${nomPDFOfficiel}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
             <style>
-                @page { size: A4 portrait; margin: 10mm; }
-                body {
-                    font-family: Arial, Helvetica, sans-serif;
-                    color: #0F172A;
-                    background-color: #525659;
-                    margin: 0;
-                    padding: 20px 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .barre-outils-pdf {
-                    position: fixed; top: 0; left: 0; right: 0;
-                    background: #1E293B; color: white; padding: 10px 20px;
-                    display: flex; justify-content: space-between; align-items: center;
-                    z-index: 10000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
-                }
-                .btn-pdf {
-                    background: #0284C7; color: white; border: none;
-                    padding: 8px 16px; border-radius: 6px; font-weight: bold;
-                    cursor: pointer; font-size: 13px;
-                }
+                @page { size: A4 portrait; margin: 8mm; }
+                * { box-sizing: border-box; }
+                body { font-family: Arial, Helvetica, sans-serif; color: #0F172A; background-color: #525659; margin: 0; padding: 20px 0; display: flex; flex-direction: column; align-items: center; }
+                .barre-outils-pdf { position: fixed; top: 0; left: 0; right: 0; background: #1E293B; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+                .btn-pdf { background: #0284C7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
                 .btn-pdf.vert { background: #0D9488; }
                 .btn-pdf:hover { opacity: 0.9; }
-                .page-a4 {
-                    background: #FFFFFF; width: 210mm; min-height: 297mm;
-                    padding: 15mm; box-sizing: border-box;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-top: 50px;
-                    overflow: hidden;
-                }
-                @media print {
-                    .barre-outils-pdf { display: none !important; }
-                    body { background: white; padding: 0; }
-                    .page-a4 { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
-                }
+                .page-a4 { background: #FFFFFF; width: 190mm; min-height: 270mm; padding: 8mm; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-top: 50px; overflow: hidden; }
+                @media print { .barre-outils-pdf { display: none !important; } body { background: white; padding: 0; } .page-a4 { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; } }
                 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                
-                td, p, div {
-                    vertical-align: top;
-                    overflow-wrap: anywhere !important;
-                    word-break: break-all !important;
-                    word-wrap: break-word !important;
-                }
+                td, p, div { vertical-align: top; overflow-wrap: anywhere !important; word-break: break-word !important; }
             </style>
         </head>
         <body>
@@ -971,37 +675,36 @@ function telechargerFicheA4(id) {
             </div>
 
             <div class="page-a4" id="contenu-fiche-a4">
-                <table style="border-bottom: 2px solid #0284C7; padding-bottom: 8px; margin-bottom: 15px;">
+                <table style="border-bottom: 2px solid #0284C7; padding-bottom: 8px; margin-bottom: 12px;">
                     <tr>
-                        <td style="width: 65%;">
-                            <h1 style="color: #0284C7; margin: 0; font-size: 22px; font-weight: 800;">🏥 TPFV</h1>
-                            <p style="margin: 4px 0 0 0; color: #475569; font-size: 11px; font-weight: 700;">Toeram - Pitsaboana Fanantenan'ny Vononkandresy III Jaona 2</p>
+                        <td style="width: 55%;">
+                            <h1 style="color: #0284C7; margin: 0; font-size: 20px; font-weight: 800;">🏥 TPFV</h1>
+                            <p style="margin: 3px 0 0 0; color: #475569; font-size: 10.5px; font-weight: 700;">Toeram - Pitsaboana Fanantenan'ny Vononkandresy III Jaona 2</p>
                         </td>
-                        <td style="width: 35%; text-align: right; font-size: 11px; color: #475569;">
-                            <p style="margin: 0;"><strong>Code Patient :</strong> <span style="font-family: monospace; font-size: 12px; font-weight: bold;">${patient.code_patient || 'N/A'}</span></p>
-                            <p style="margin: 4px 0 0 0;"><strong>Date d'émission :</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+                        <td style="width: 45%; text-align: right; font-size: 11px; color: #475569;">
+                            <p style="margin: 0; white-space: nowrap;"><strong>Code Patient :</strong> <span style="font-family: monospace; font-size: 11.5px; font-weight: bold;">${patient.code_patient || 'N/A'}</span></p>
+                            <p style="margin: 3px 0 0 0; white-space: nowrap;"><strong>Date d'émission :</strong> ${formaterDateEnLettres(new Date().toISOString().slice(0, 10))}</p>
                         </td>
                     </tr>
                 </table>
 
-                <h2 style="text-align: center; text-transform: uppercase; color: #0369A1; font-size: 13px; margin: 0 0 15px 0; background: #F0F9FF; padding: 6px; border-radius: 6px; border: 1px solid #BAE6FD;">
+                <h2 style="text-align: center; text-transform: uppercase; color: #0369A1; font-size: 12.5px; margin: 0 0 12px 0; background: #F0F9FF; padding: 5px; border-radius: 6px; border: 1px solid #BAE6FD;">
                     FICHE MÉDICALE ET HISTORIQUE DU PATIENT
                 </h2>
 
-                <!-- 1. INFORMATIONS ADMINISTRATIVES -->
-                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 10px; margin-bottom: 12px; background-color: #FAFAFA;">
-                    <h3 style="color: #0284C7; font-size: 12px; margin: 0 0 6px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 4px; text-transform: uppercase;">👤 Informations Administratives</h3>
-                    <table style="font-size: 11px; line-height: 1.6;">
+                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FAFAFA;">
+                    <h3 style="color: #0284C7; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 3px; text-transform: uppercase;">👤 Informations Administratives</h3>
+                    <table style="font-size: 10.5px; line-height: 1.5;">
                         <tr>
                             <td style="width: 50%;"><strong>Nom et Prénom :</strong> ${patient.nom_complet || 'Non renseigné'}</td>
                             <td style="width: 50%;"><strong>Sexe :</strong> ${patient.sexe || 'Non renseigné'}</td>
                         </tr>
                         <tr>
-                            <td><strong>Date de naissance :</strong> ${formaterDateEtAge(patient.date_naissance)}</td>
+                            <td><strong>Date de naissance :</strong> ${formaterDateEnLettres(patient.date_naissance)}</td>
                             <td><strong>Téléphone :</strong> ${patient.telephone || 'Non renseigné'}</td>
                         </tr>
                         <tr>
-                            <td><strong>Date d'entrée :</strong> ${formaterDateEtAge(patient.date_entree).split(' ')[0]}</td>
+                            <td><strong>Date d'entrée :</strong> ${formaterDateEnLettres(patient.date_entree)}</td>
                             <td><strong>Adresse :</strong> ${patient.adresse || 'Non renseignée'}</td>
                         </tr>
                         <tr>
@@ -1010,10 +713,9 @@ function telechargerFicheA4(id) {
                     </table>
                 </div>
 
-                <!-- 2. ANTÉCÉDENTS MÉDICAUX -->
-                <div style="border: 1px solid #FCA5A5; border-radius: 8px; padding: 10px; margin-bottom: 12px; background-color: #FFF5F5;">
-                    <h3 style="color: #DC2626; font-size: 12px; margin: 0 0 6px 0; border-bottom: 1px solid #FCA5A5; padding-bottom: 4px; text-transform: uppercase;">🩺 Antécédents Médicaux</h3>
-                    <table style="font-size: 11px; line-height: 1.6;">
+                <div style="border: 1px solid #FCA5A5; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FFF5F5;">
+                    <h3 style="color: #DC2626; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #FCA5A5; padding-bottom: 3px; text-transform: uppercase;">🩺 Antécédents Médicaux</h3>
+                    <table style="font-size: 10.5px; line-height: 1.5;">
                         <tr>
                             <td colspan="2" style="color: #DC2626; font-weight: bold;"><strong>⚠️ Allergies connues :</strong> ${patient.allergies || 'Aucune allergie signalée'}</td>
                         </tr>
@@ -1027,34 +729,30 @@ function telechargerFicheA4(id) {
                     </table>
                 </div>
 
-                <!-- 3. CONSTANTES VITALES & SUIVI CLINIQUE -->
-                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 10px; margin-bottom: 12px; background-color: #FAFAFA;">
-                    <h3 style="color: #0D9488; font-size: 12px; margin: 0 0 6px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 4px; text-transform: uppercase;">📊 Constantes Vitales & Diagnostic</h3>
-                    
-                    <table style="background: #FFFFFF; border-radius: 6px; border: 1px solid #CBD5E1; margin-bottom: 10px; font-size: 11px; text-align: center;">
+                <div style="border: 1px solid #E0F2FE; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background-color: #FAFAFA;">
+                    <h3 style="color: #0D9488; font-size: 11.5px; margin: 0 0 5px 0; border-bottom: 1px solid #E0F2FE; padding-bottom: 3px; text-transform: uppercase;">📊 Constantes Vitales & Diagnostic</h3>
+                    <table style="background: #FFFFFF; border-radius: 6px; border: 1px solid #CBD5E1; margin-bottom: 8px; font-size: 10.5px; text-align: center;">
                         <tr>
-                            <td style="padding: 6px; width: 25%;">🌡️ Temp : <strong>${v.temp ? v.temp + ' °C' : '--'}</strong></td>
-                            <td style="padding: 6px; width: 25%;">⚖️ Poids : <strong>${v.poids ? v.poids + ' kg' : '--'}</strong></td>
-                            <td style="padding: 6px; width: 25%;">❤️ Pouls : <strong>${v.pouls ? v.pouls + ' bpm' : '--'}</strong></td>
-                            <td style="padding: 6px; width: 25%;">🩺 Tension : <strong>${v.sys && v.dia ? v.sys + '/' + v.dia + ' mmHg' : '--'}</strong></td>
+                            <td style="padding: 5px; width: 25%;">🌡️ Temp : <strong>${v.temp ? v.temp + ' °C' : '--'}</strong></td>
+                            <td style="padding: 5px; width: 25%;">⚖️ Poids : <strong>${v.poids ? v.poids + ' kg' : '--'}</strong></td>
+                            <td style="padding: 5px; width: 25%;">❤️ Pouls : <strong>${v.pouls ? v.pouls + ' bpm' : '--'}</strong></td>
+                            <td style="padding: 5px; width: 25%;">🩺 Tension : <strong>${v.sys && v.dia ? v.sys + '/' + v.dia + ' mmHg' : '--'}</strong></td>
                         </tr>
                     </table>
-
-                    <p style="font-size: 11px; margin: 4px 0;"><strong>Motif de la visite :</strong> ${patient.motif_visite || 'Non renseigné'}</p>
-                    <p style="font-size: 11px; margin: 4px 0;"><strong>Diagnostic / Avis médical :</strong> ${patient.diagnostic || 'En attente'}</p>
-                    <p style="font-size: 11px; margin: 4px 0;"><strong>Prochain rendez-vous :</strong> ${patient.prochain_rdv ? formaterDateEtAge(patient.prochain_rdv).split(' ')[0] : 'Non planifié'}</p>
-                    <p style="font-size: 11px; margin: 4px 0; overflow-wrap: anywhere; word-break: break-all;"><strong>Notes complémentaires :</strong> ${patient.notes || 'Aucune'}</p>
+                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Motif de la visite :</strong> ${patient.motif_visite || 'Non renseigné'}</p>
+                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Diagnostic / Avis médical :</strong> ${patient.diagnostic || 'En attente'}</p>
+                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Prochain rendez-vous :</strong> ${formaterDateEnLettres(patient.prochain_rdv)}</p>
+                    <p style="font-size: 10.5px; margin: 3px 0;"><strong>Notes complémentaires :</strong> ${patient.notes || 'Aucune'}</p>
                 </div>
 
-                <!-- PIED DE PAGE -->
-                <table style="margin-top: 25px; font-size: 10px; color: #475569;">
+                <table style="margin-top: 20px; font-size: 10px; color: #475569;">
                     <tr>
                         <td style="width: 60%; vertical-align: bottom;">
                             <p style="margin: 0;"><strong>Statut Consultation :</strong> ${patient.consultation_statut || 'Non payé'}</p>
-                            <p style="margin: 3px 0 0 0;"><strong>Contrôle Requis :</strong> ${patient.besoin_controle || 'Non'}</p>
+                            <p style="margin: 2px 0 0 0;"><strong>Contrôle Requis :</strong> ${patient.besoin_controle || 'Non'}</p>
                         </td>
                         <td style="width: 40%; vertical-align: bottom; text-align: right;">
-                            <div style="display: inline-block; text-align: center; border-top: 1px solid #94A3B8; width: 180px; padding-top: 4px;">
+                            <div style="display: inline-block; text-align: center; border-top: 1px solid #94A3B8; width: 170px; padding-top: 3px;">
                                 <p style="margin: 0; font-weight: bold; color: #1E293B;">Cachet & Signature du Médecin</p>
                             </div>
                         </td>
@@ -1066,7 +764,7 @@ function telechargerFicheA4(id) {
                 function telechargerDirectPDF() {
                     const el = document.getElementById('contenu-fiche-a4');
                     const options = {
-                        margin: 8,
+                        margin: 0,
                         filename: '${nomPDFOfficiel}',
                         image: { type: 'jpeg', quality: 0.98 },
                         html2canvas: { scale: 2, logging: false },
@@ -1081,7 +779,7 @@ function telechargerFicheA4(id) {
     fenetre.document.close();
 }
 
-// --- 10. SOUMISSIONS FORMULAIRES PATIENTS ---
+// --- 10. SOUMISSIONS FORMULAIRES ---
 document.getElementById('formPatient').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btnSoumission = e.target.querySelector('button[type="submit"]');

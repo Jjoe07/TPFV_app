@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPFV - Dossier Médical & Gestion Pharmacie</title>
+    <title>TPFV - Dossier Médical</title>
     <link rel="icon" type="image/png" href="icone.png">
     <link rel="stylesheet" href="style.css">
+    <!-- BIBLIOTHÈQUES INTÉGRÉES : GENERATION PDF & SPREADSHEET EXCEL/CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="app.js" defer></script>
 </head>
 <body>
@@ -59,7 +61,7 @@
 
             <nav class="onglets">
                 <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👤 Patients</button>
-                <button id="btn-inventaire" class="onglet" onclick="changerOnglet('inventaire')">💊 Inventaire Pharmacie</button>
+                <button id="btn-inventaire" class="onglet" onclick="location.href='inventaire.html'" style="display: none;">💊 Inventaire Pharmacie</button>
                 <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')" style="display: none;">⚙️ Paramètres</button>
                 <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')" style="display: none;">🔐 Mon Compte</button>
                 <button id="btn-theme" class="onglet" onclick="basculerTheme()">🌙 Mode Sombre</button>
@@ -155,86 +157,6 @@
                 </div>
             </div>
 
-            <!-- SECTION INVENTAIRE PHARMACIE (STRUCTURE EXCEL MANARINTSOA 2025) -->
-            <div id="section-inventaire" class="section-cachee animate-fade">
-                
-                <!-- BANDEAU DE DASHBOARD KPI -->
-                <div class="kpi-bandeau">
-                    <div class="carte-kpi">
-                        <span class="icone-kpi">📦</span>
-                        <div>
-                            <div class="valeur-kpi" id="kpi-total-articles">0</div>
-                            <div class="label-kpi">Articles Référencés</div>
-                        </div>
-                    </div>
-                    <div class="carte-kpi vert">
-                        <span class="icone-kpi">💰</span>
-                        <div>
-                            <div class="valeur-kpi" id="kpi-valeur-stock">0 Ar</div>
-                            <div class="label-kpi">Valorisation du Stock</div>
-                        </div>
-                    </div>
-                    <div class="carte-kpi rouge">
-                        <span class="icone-kpi">🚨</span>
-                        <div>
-                            <div class="valeur-kpi" id="kpi-ruptures">0</div>
-                            <div class="label-kpi">Ruptures / Alerte Stock</div>
-                        </div>
-                    </div>
-                    <div class="carte-kpi orange">
-                        <span class="icone-kpi">⏳</span>
-                        <div>
-                            <div class="valeur-kpi" id="kpi-peremptions">0</div>
-                            <div class="label-kpi">Péremptions Proches</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BARRE D'OUTILS ET DE FILTRES INVENTAIRE -->
-                <section class="carte">
-                    <div class="barre-outils-inventaire">
-                        <div class="recherche-inventaire-bloc">
-                            <input type="text" id="recherche-inventaire" placeholder="🔍 Rechercher un médicament / produit..." oninput="filtrerInventaire()">
-                            <select id="filtre-etat-stock" onchange="filtrerInventaire()">
-                                <option value="tous">Tous les produits</option>
-                                <option value="alerte">🔴 Rupture / Alerte Stock</option>
-                                <option value="peremption">⚠️ Péremption Proche (< 60 jours)</option>
-                                <option value="normal">🟢 En Stock Suffisant</option>
-                            </select>
-                        </div>
-                        <div class="boutons-actions-inventaire">
-                            <button class="btn-action-inv vert" onclick="ouvrirModalAjoutProduit()">➕ Ajouter un Produit</button>
-                            <button class="btn-action-inv bleu" onclick="imprimerRapportInventaireA4()">📊 Rapport PDF A4</button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- TABLEAU FLUIDE DES MÉDICAMENTS (CONFORME À VOTRE TABLEAU EXCEL) -->
-                <section class="carte transparent">
-                    <h2>Stock Actuel de la Pharmacie</h2>
-                    <div class="conteneur-tableau-fluide">
-                        <table class="tableau-inventaire">
-                            <thead>
-                                <tr>
-                                    <th>Désignation & Forme</th>
-                                    <th>Date Péremption (DP)</th>
-                                    <th>Stock Init. (A)</th>
-                                    <th>Entrées (+B)</th>
-                                    <th>Sorties (-D)</th>
-                                    <th>Reste (E)</th>
-                                    <th>Prix Unitaire</th>
-                                    <th>Valeur Stock</th>
-                                    <th style="text-align: center;">Actions Stock</th>
-                                </tr>
-                            </thead>
-                            <tbody id="corpsTableauInventaire">
-                                <!-- Injecté dynamiquement par app.js -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-
             <!-- SECTION PARAMÈTRES -->
             <div id="section-parametres" class="section-cachee animate-fade">
                 <section class="carte">
@@ -246,6 +168,46 @@
                         </div>
                         <button type="submit" class="btn-principal" style="background-color: #F59E0B;">Mettre à jour</button>
                     </form>
+                </section>
+
+                <section class="carte" style="margin-top: 20px;">
+                    <h2>📈 Statistiques des Inscriptions Mensuelles</h2>
+                    <p style="color: var(--texte-clair); font-size: 13.5px; margin-bottom: 15px;">
+                        Vue détaillée du nombre de nouveaux patients enregistrés mois par mois dans la clinique TPFV.
+                    </p>
+                    <div class="conteneur-tableau-fluide">
+                        <table class="tableau-inventaire">
+                            <thead>
+                                <tr>
+                                    <th>Mois &amp; Année</th>
+                                    <th style="text-align: center;">Nouveaux Patients Inscrits</th>
+                                    <th style="text-align: center;">Part du Total (%)</th>
+                                    <th>Visuel d'Inscriptions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpsStatsMensuelles"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="carte" style="margin-top: 20px;">
+                    <h2>📁 Import &amp; Export des Dossiers Patients</h2>
+                    <div class="grille-2">
+                        <div class="section-form-bloc">
+                            <h3 class="titre-bloc-form bleu">📥 Exporter les données</h3>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" onclick="exporterPatientsCSV()" class="btn-action-inv vert" style="flex: 1;">📄 CSV</button>
+                                <button type="button" onclick="exporterPatientsExcel()" class="btn-action-inv bleu" style="flex: 1;">📊 Excel (.xlsx)</button>
+                            </div>
+                        </div>
+                        <div class="section-form-bloc">
+                            <h3 class="titre-bloc-form vert">📤 Importer des patients</h3>
+                            <form id="formImportPatients">
+                                <div class="champ-groupe"><input type="file" id="fichierImport" accept=".csv, .xlsx, .xls" required style="padding: 6px;"></div>
+                                <button type="submit" class="btn-principal" style="background-color: var(--vert-soin);">Lancer l'importation</button>
+                            </form>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -275,9 +237,8 @@
             </div>
             <form id="formEditPatient">
                 <input type="hidden" id="edit_id">
-                
                 <div class="section-form-bloc">
-                    <h3 class="titre-bloc-form">👤 Administrateur</h3>
+                    <h3 class="titre-bloc-form">👤 Informations Administratives</h3>
                     <div class="champ-groupe"><label>Nom et Prénom</label><input type="text" id="edit_nom_complet" required></div>
                     <div class="grille-2">
                         <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="edit_date_naissance" required></div>
@@ -324,78 +285,6 @@
                 <div class="champ-groupe" style="margin-top: 10px;"><label>Notes médicales</label><textarea id="edit_notes" rows="2"></textarea></div>
                 
                 <button type="submit" class="btn-principal" style="background-color: var(--vert-soin); margin-top: 15px;">Sauvegarder les modifications</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODALE CRÉATION / ÉDITION PRODUIT INVENTAIRE -->
-    <div id="modal-inventaire" class="section-cachee">
-        <div class="carte" style="max-width: 550px; margin: 30px auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 id="titre-modal-inv" style="margin: 0; font-size: 18px;">💊 Fiche Produit Pharmacie</h2>
-                <button onclick="fermerModalInventaire()" style="background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
-            </div>
-            <form id="formProduitInventaire">
-                <input type="hidden" id="inv_id">
-                <div class="champ-groupe">
-                    <label for="inv_nom">Désignation, Forme et Dosage *</label>
-                    <input type="text" id="inv_nom" placeholder="Ex: Paracétamol 500mg cpr" required>
-                </div>
-                <div class="grille-2">
-                    <div class="champ-groupe">
-                        <label for="inv_dp">Date de Péremption (DP)</label>
-                        <input type="date" id="inv_dp">
-                    </div>
-                    <div class="champ-groupe">
-                        <label for="inv_prix">Prix Unitaire (Ar)</label>
-                        <input type="number" id="inv_prix" step="100" placeholder="Ex: 800" required>
-                    </div>
-                </div>
-                <div class="grille-2">
-                    <div class="champ-groupe">
-                        <label for="inv_stock_init">Stock Initial (A)</label>
-                        <input type="number" id="inv_stock_init" min="0" value="0">
-                    </div>
-                    <div class="champ-groupe">
-                        <label for="inv_seuil">Seuil d'Alerte Stock</label>
-                        <input type="number" id="inv_seuil" min="1" value="5">
-                    </div>
-                </div>
-                <div class="grille-2">
-                    <div class="champ-groupe">
-                        <label for="inv_entrees">Entrées cumulées (+B)</label>
-                        <input type="number" id="inv_entrees" min="0" value="0">
-                    </div>
-                    <div class="champ-groupe">
-                        <label for="inv_sorties">Sorties cumulées (-D)</label>
-                        <input type="number" id="inv_sorties" min="0" value="0">
-                    </div>
-                </div>
-                <div class="champ-groupe">
-                    <label for="inv_desc">Description / Emplacement</label>
-                    <input type="text" id="inv_desc" placeholder="Ex: Étagère A - Antibiotiques">
-                </div>
-                <button type="submit" class="btn-principal" style="background-color: var(--vert-soin); margin-top: 10px;">Enregistrer le Produit</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODALE SAISIE RAPIDE DE MOUVEMENT (+ Entrée / - Sortie) -->
-    <div id="modal-mouvement-stock" class="section-cachee">
-        <div class="carte" style="max-width: 400px; margin: 50px auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 id="titre-modal-mouvement" style="margin: 0; font-size: 16px;">⚡ Mouvement de Stock</h3>
-                <button onclick="fermerModalMouvement()" style="background: none; border: none; font-size: 18px; cursor: pointer;">❌</button>
-            </div>
-            <form id="formMouvementStock">
-                <input type="hidden" id="mouv_id">
-                <input type="hidden" id="mouv_type">
-                <p id="mouv_nom_produit" style="font-weight: bold; color: var(--bleu-primaire); margin-bottom: 12px;"></p>
-                <div class="champ-groupe">
-                    <label id="label_quantite_mouv">Quantité</label>
-                    <input type="number" id="mouv_quantite" min="1" value="1" required style="font-size: 18px; text-align: center; font-weight: bold;">
-                </div>
-                <button type="submit" id="btn-valider-mouvement" class="btn-principal" style="margin-top: 10px;">Valider le Mouvement</button>
             </form>
         </div>
     </div>
