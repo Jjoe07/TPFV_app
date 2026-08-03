@@ -1,12 +1,12 @@
 // =========================================================================
-// FICHIER : public/app.js (Affichage par 5 & Tri Alphabétique de A à Z)
+// FICHIER : public/app.js (En-tête officiel TPFV mis à jour pour la Fiche A4)
 // =========================================================================
 let tousLesPatients = [];
 let patientsFiltresGlobaux = [];
 let pageActuelle = 1;
 let roleActuel = '';
 
-// MODIFICATION : Affichage de 5 patients par page
+// Affichage de 5 patients par page
 const patientsParPage = 5;
 
 // --- 1. UTILITIES & POPUP ALERTE ---
@@ -29,9 +29,11 @@ function afficherAlerte(titre, message, type = 'info') {
     });
 }
 
+// FORMATAGE DES DATES EN TOUTES LETTRES (ex: "26 juillet 2026")
 function formaterDateEnLettres(dateString) {
     if (!dateString || dateString.trim() === '') return 'Non renseignée';
     let year, month, day;
+    
     if (dateString.includes('-')) {
         const parties = dateString.split('-');
         if (parties.length === 3) [year, month, day] = parties;
@@ -40,10 +42,16 @@ function formaterDateEnLettres(dateString) {
         if (parties.length === 3) [day, month, year] = parties;
     }
     if (!year || !month || !day) return dateString;
-    const moisAbbreges = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
+
+    const moisComplets = [
+        "janvier", "février", "mars", "avril", "mai", "juin", 
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ];
+    
     const indexMois = parseInt(month, 10) - 1;
     if (indexMois >= 0 && indexMois < 12) {
-        return `${parseInt(day, 10).toString().padStart(2, '0')}${moisAbbreges[indexMois]} ${year}`;
+        const jourNumero = parseInt(day, 10).toString().padStart(2, '0');
+        return `${jourNumero} ${moisComplets[indexMois]} ${year}`;
     }
     return dateString;
 }
@@ -128,20 +136,97 @@ function seDeconnecter() {
     document.getElementById('ecran-connexion').classList.replace('section-cachee','section-visible'); 
 }
 
+// --- 4. ÉCOUTEURS DES FORMULAIRES DE MOT DE PASSE (PARAMÈTRES ADMIN) ---
 window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('champ-recherche')?.addEventListener('input', filtrerPatients);
     document.getElementById('filtre-recherche')?.addEventListener('change', filtrerPatients);
     
+    // FORMULAIRE MODIFICATION MOT DE PASSE ÉQUIPE (AGENT / SUPPORT)
+    const formEquipe = document.getElementById('formResetMdpEquipe');
+    if (formEquipe) {
+        formEquipe.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const roleSelect = document.getElementById('role-a-modifier')?.value;
+            const nouveauMdpInput = document.getElementById('nouveau-mdp-equipe');
+            const nouveauMdp = nouveauMdpInput ? nouveauMdpInput.value : '';
+
+            if (!nouveauMdp || !nouveauMdp.trim()) {
+                return afficherAlerte("Champ requis", "Veuillez entrer un mot de passe valide.", "erreur");
+            }
+
+            try {
+                const reponse = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        role_a_modifier: roleSelect,
+                        nouveau_mot_de_passe: nouveauMdp.trim()
+                    })
+                });
+
+                const data = await reponse.json();
+
+                if (reponse.ok) {
+                    await afficherAlerte("Succès", data.message, "succes");
+                    if (nouveauMdpInput) nouveauMdpInput.value = '';
+                } else {
+                    await afficherAlerte("Erreur", data.erreur || "Impossible de modifier le mot de passe.", "erreur");
+                }
+            } catch (err) {
+                await afficherAlerte("Erreur réseau", "Impossible de contacter le serveur.", "erreur");
+            }
+        });
+    }
+
+    // FORMULAIRE MODIFICATION MOT DE PASSE ADMIN
+    const formAdmin = document.getElementById('formResetMdpAdmin');
+    if (formAdmin) {
+        formAdmin.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const ancienMdpInput = document.getElementById('ancien-mdp-admin');
+            const nouveauMdpInput = document.getElementById('nouveau-mdp-admin');
+            
+            const ancienMdp = ancienMdpInput ? ancienMdpInput.value : '';
+            const nouveauMdp = nouveauMdpInput ? nouveauMdpInput.value : '';
+
+            if (!nouveauMdp || !nouveauMdp.trim()) {
+                return afficherAlerte("Champ requis", "Veuillez saisir un nouveau mot de passe valide.", "erreur");
+            }
+
+            try {
+                const reponse = await fetch('/api/admin-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ancien_mot_de_passe: ancienMdp,
+                        nouveau_mot_de_passe: nouveauMdp.trim()
+                    })
+                });
+
+                const data = await reponse.json();
+
+                if (reponse.ok) {
+                    await afficherAlerte("Succès", data.message, "succes");
+                    if (ancienMdpInput) ancienMdpInput.value = '';
+                    if (nouveauMdpInput) nouveauMdpInput.value = '';
+                } else {
+                    await afficherAlerte("Erreur", data.erreur || "L'ancien mot de passe est incorrect.", "erreur");
+                }
+            } catch (err) {
+                await afficherAlerte("Erreur réseau", "Impossible de contacter le serveur.", "erreur");
+            }
+        });
+    }
+
     const sess = localStorage.getItem('sessionCliniqueRole');
     if (sess) appliquerDroitsRole(sess);
 });
 
-// --- 4. NAVIGATION & RECHERCHE AVEC TRI ALPHABÉTIQUE ---
+// --- 5. NAVIGATION & RECHERCHE AVEC TRI ALPHABÉTIQUE ---
 function filtrerPatients() {
     const term = (document.getElementById('champ-recherche')?.value || '').toLowerCase().trim();
     const filtre = document.getElementById('filtre-recherche')?.value || 'tout';
     
-    // Filtrage et Tri Alphabétique (A à Z)
     patientsFiltresGlobaux = tousLesPatients
         .filter(p => {
             const n=(p.nom_complet||'').toLowerCase(), c=(p.code_patient||'').toLowerCase(), t=(p.telephone||'').toLowerCase();
@@ -182,7 +267,7 @@ function changerSousOngletPatients(ong) {
     }
 }
 
-// --- 5. GESTION DES PATIENTS ---
+// --- 6. GESTION DES PATIENTS ---
 async function chargerPatients() { 
     try { 
         const res = await fetch('/api/patients');
@@ -203,7 +288,6 @@ function afficherPatients(liste) {
     const maxPage = Math.ceil(liste.length / patientsParPage); 
     if(pageActuelle > maxPage) pageActuelle = maxPage;
     
-    // Affichage limité à 5 patients par page
     liste.slice((pageActuelle - 1) * patientsParPage, pageActuelle * patientsParPage).forEach(p => {
         let btn = `<button onclick="telechargerFicheA4(${p.id})" style="background:#0D9488;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:5px;font-weight:600;">📄 Fiche</button>`;
         if(roleActuel !== 'agent') btn += `<button onclick="ouvrirModalEdition(${p.id})" style="background:var(--bleu-primaire);color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:5px;font-weight:600;">✏️ Modif</button>`;
@@ -245,7 +329,6 @@ function afficherPatients(liste) {
         </li>`;
     });
 
-    // Pagination
     const pagin = document.getElementById('pagination-patients');
     if (pagin) {
         pagin.innerHTML = maxPage > 1 ? `<button onclick="changerPage(-1)" ${pageActuelle===1?'disabled':''}>Précédent</button> Page ${pageActuelle}/${maxPage} <button onclick="changerPage(1)" ${pageActuelle===maxPage?'disabled':''}>Suivant</button>` : '';
@@ -379,7 +462,7 @@ async function supprimerPatient(id) {
     } 
 }
 
-// --- 6. FICHE A4 PDF ---
+// --- 7. FICHE A4 PDF ---
 function telechargerFicheA4(id) {
     const patient = tousLesPatients.find(p => p.id === id);
     if (!patient) return;
@@ -418,7 +501,8 @@ function telechargerFicheA4(id) {
                 .page-a4 { background: #FFFFFF; width: 190mm; min-height: 265mm; padding: 10mm; margin-top: 45px; }
                 @media print { .barre-outils-pdf { display: none !important; } body { background: white; padding: 0; } .page-a4 { width: 100%; margin: 0; padding: 0; } }
                 .header-table { width: 100%; border-collapse: collapse; }
-                .header-logo-title { color: #0284C7; margin: 0; font-size: 22px; font-weight: 800; }
+                .header-logo-title { color: #0284C7; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
+                .header-subtitle { color: #64748B; font-size: 11px; font-weight: 600; margin-top: 3px; line-height: 1.3; }
                 .header-bar { height: 3px; background: #0284C7; width: 100%; margin: 8px 0 12px 0; }
                 .banner-title { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px; text-align: center; color: #0284C7; font-size: 13px; font-weight: 800; padding: 8px; margin-bottom: 14px; }
                 .section-box { border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.6; }
@@ -438,8 +522,11 @@ function telechargerFicheA4(id) {
             <div class="page-a4" id="contenu-fiche-a4">
                 <table class="header-table">
                     <tr>
-                        <td style="width: 60%;"><h1 class="header-logo-title">🏥 CliniqueApp</h1></td>
-                        <td style="width: 40%; text-align:right; font-size:11px;">
+                        <td style="width: 65%;">
+                            <h1 class="header-logo-title">🏥 TPFV</h1>
+                            <div class="header-subtitle">Toeram-Pitsaboana Fanantenan'ny Vononkandresy III Jaona 2</div>
+                        </td>
+                        <td style="width: 35%; text-align:right; font-size:11px;">
                             <strong>Code Patient :</strong> ${patient.code_patient || 'N/A'}<br>
                             <strong>Date :</strong> ${dateAujourdhui}
                         </td>
