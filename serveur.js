@@ -1,5 +1,5 @@
 // =========================================================================
-// FICHIER : serveur.js (Tri Alphabétique A-Z dans la base SQLite)
+// FICHIER : serveur.js (Avec système d'historique des consultations)
 // =========================================================================
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
@@ -52,12 +52,13 @@ db.serialize(() => {
         services_specifiques TEXT,
         date_rdv_specialiste TEXT,
         heure_rdv_specialiste TEXT,
+        historique_consultations TEXT DEFAULT '[]',
         parametres TEXT, 
         notes TEXT
     )`);
 
-    // Verification & Migration des colonnes SQLite
-    const colonnes = ['contact_urgence', 'allergies', 'maladies_chroniques', 'chirurgies', 'traitements_en_cours', 'motif_visite', 'diagnostic', 'prochain_rdv', 'date_visite', 'type_consultation', 'services_specifiques', 'date_rdv_specialiste', 'heure_rdv_specialiste'];
+    // Verification & Migration des colonnes SQLite (Inclut l'historique)
+    const colonnes = ['contact_urgence', 'allergies', 'maladies_chroniques', 'chirurgies', 'traitements_en_cours', 'motif_visite', 'diagnostic', 'prochain_rdv', 'date_visite', 'type_consultation', 'services_specifiques', 'date_rdv_specialiste', 'heure_rdv_specialiste', 'historique_consultations'];
     colonnes.forEach(col => {
         db.run(`ALTER TABLE Patients ADD COLUMN ${col} TEXT`, () => {});
     });
@@ -96,7 +97,7 @@ app.post('/api/admin-password', (req, res) => {
     });
 });
 
-// --- API PATIENTS (Trié de A à Z par nom_complet) ---
+// --- API PATIENTS (Trié de A à Z) ---
 app.get('/api/patients', (req, res) => { 
     db.all("SELECT * FROM Patients ORDER BY nom_complet COLLATE NOCASE ASC", [], (err, lignes) => res.json(err ? { erreur: err.message } : lignes)); 
 });
@@ -115,16 +116,16 @@ app.post('/api/patients', (req, res) => {
         const num = dernier ? parseInt(dernier.code_patient.slice(-3), 10) || 0 : 0;
         const code = `${df}${(num + 1).toString().padStart(3, '0')}`;
         
-        db.run(`INSERT INTO Patients (code_patient, nom_complet, date_entree, date_visite, date_naissance, sexe, telephone, adresse, contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours, motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, type_consultation, services_specifiques, date_rdv_specialiste, heure_rdv_specialiste, parametres, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
-        [code, p.nom_complet.trim(), p.date_entree||'', p.date_visite||'', p.date_naissance||'', p.sexe||'Masculin', p.telephone.trim(), p.adresse||'', p.contact_urgence||'', p.allergies||'', p.maladies_chroniques||'', p.chirurgies||'', p.traitements_en_cours||'', p.motif_visite||'', p.diagnostic||'', p.prochain_rdv||'', p.consultation_statut || 'Non payé', p.besoin_controle || 'Non', p.type_consultation || 'Consultation généraliste', p.services_specifiques || '', p.date_rdv_specialiste || '', p.heure_rdv_specialiste || '', p.parametres||'', p.notes||''], 
+        db.run(`INSERT INTO Patients (code_patient, nom_complet, date_entree, date_visite, date_naissance, sexe, telephone, adresse, contact_urgence, allergies, maladies_chroniques, chirurgies, traitements_en_cours, motif_visite, diagnostic, prochain_rdv, consultation_statut, besoin_controle, type_consultation, services_specifiques, date_rdv_specialiste, heure_rdv_specialiste, historique_consultations, parametres, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+        [code, p.nom_complet.trim(), p.date_entree||'', p.date_visite||'', p.date_naissance||'', p.sexe||'Masculin', p.telephone.trim(), p.adresse||'', p.contact_urgence||'', p.allergies||'', p.maladies_chroniques||'', p.chirurgies||'', p.traitements_en_cours||'', p.motif_visite||'', p.diagnostic||'', p.prochain_rdv||'', p.consultation_statut || 'Non payé', p.besoin_controle || 'Non', p.type_consultation || 'Consultation généraliste', p.services_specifiques || '', p.date_rdv_specialiste || '', p.heure_rdv_specialiste || '', '[]', p.parametres||'', p.notes||''], 
         function(e) { res.json(e ? { erreur: e.message } : { id: this.lastID, message: "Dossier créé !" }); });
     });
 });
 
 app.put('/api/patients/:id', (req, res) => {
     const p = req.body;
-    db.run(`UPDATE Patients SET nom_complet=?, date_entree=?, date_visite=?, date_naissance=?, sexe=?, telephone=?, adresse=?, contact_urgence=?, allergies=?, maladies_chroniques=?, chirurgies=?, traitements_en_cours=?, motif_visite=?, diagnostic=?, prochain_rdv=?, consultation_statut=?, besoin_controle=?, type_consultation=?, services_specifiques=?, date_rdv_specialiste=?, heure_rdv_specialiste=?, parametres=?, notes=? WHERE id=?`, 
-    [p.nom_complet.trim(), p.date_entree||'', p.date_visite||'', p.date_naissance||'', p.sexe||'Masculin', p.telephone.trim(), p.adresse||'', p.contact_urgence||'', p.allergies||'', p.maladies_chroniques||'', p.chirurgies||'', p.traitements_en_cours||'', p.motif_visite||'', p.diagnostic||'', p.prochain_rdv||'', p.consultation_statut||'Non payé', p.besoin_controle||'Non', p.type_consultation||'Consultation généraliste', p.services_specifiques||'', p.date_rdv_specialiste||'', p.heure_rdv_specialiste||'', p.parametres||'', p.notes||'', req.params.id], 
+    db.run(`UPDATE Patients SET nom_complet=?, date_entree=?, date_visite=?, date_naissance=?, sexe=?, telephone=?, adresse=?, contact_urgence=?, allergies=?, maladies_chroniques=?, chirurgies=?, traitements_en_cours=?, motif_visite=?, diagnostic=?, prochain_rdv=?, consultation_statut=?, besoin_controle=?, type_consultation=?, services_specifiques=?, date_rdv_specialiste=?, heure_rdv_specialiste=?, historique_consultations=?, parametres=?, notes=? WHERE id=?`, 
+    [p.nom_complet.trim(), p.date_entree||'', p.date_visite||'', p.date_naissance||'', p.sexe||'Masculin', p.telephone.trim(), p.adresse||'', p.contact_urgence||'', p.allergies||'', p.maladies_chroniques||'', p.chirurgies||'', p.traitements_en_cours||'', p.motif_visite||'', p.diagnostic||'', p.prochain_rdv||'', p.consultation_statut||'Non payé', p.besoin_controle||'Non', p.type_consultation||'Consultation généraliste', p.services_specifiques||'', p.date_rdv_specialiste||'', p.heure_rdv_specialiste||'', p.historique_consultations||'[]', p.parametres||'', p.notes||'', req.params.id], 
     e => res.json(e ? { erreur: e.message } : { message: "Mis à jour" }));
 });
 

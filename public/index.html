@@ -36,28 +36,32 @@
     </div>
 
     <!-- APPLICATION PRINCIPALE -->
-    <div id="application-principale" class="section-cachee">
-        <header class="en-tete">
-            <div class="logo-container">
-                <h1>🏥 TPFV</h1>
-            </div>
-            <div class="barre-recherche-globale">
-                <select id="filtre-recherche" class="select-header">
-                    <option value="tout">Partout...</option>
-                    <option value="nom">Nom</option>
-                    <option value="code">Code</option>
-                    <option value="telephone">Téléphone</option>
-                </select>
-                <input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header">
-            </div>
-            <div class="onglets">
-                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
-                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
-                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
-                <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
-                <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
-            </div>
-        </header>
+<div id="application-principale" class="section-cachee">
+    <header class="en-tete">
+        <!-- LOGO CLIQUABLE (RAFRAÎCHISSEMENT DE LA PAGE) -->
+        <div class="logo-container" onclick="window.location.reload();" style="cursor: pointer; display: flex; align-items: center;" title="Rafraîchir la page">
+            <img src="logo.png" alt="Logo TPFV" style="height: 32px; margin-right: 10px;">
+            <h1 style="margin: 0; color: #0284C7;">TPFV</h1>
+        </div>
+
+        <div class="barre-recherche-globale">
+            <select id="filtre-recherche" class="select-header">
+                <option value="tout">Partout...</option>
+                <option value="nom">Nom</option>
+                <option value="code">Code</option>
+                <option value="telephone">Téléphone</option>
+            </select>
+            <input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header">
+        </div>
+
+        <div class="onglets">
+            <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
+            <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
+            <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
+            <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
+            <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
+        </div>
+    </header>
 
         <main class="conteneur">
             <!-- SECTION PATIENTS -->
