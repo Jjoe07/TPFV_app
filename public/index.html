@@ -36,32 +36,31 @@
     </div>
 
     <!-- APPLICATION PRINCIPALE -->
-<div id="application-principale" class="section-cachee">
-    <header class="en-tete">
-        <!-- LOGO CLIQUABLE (RAFRAÎCHISSEMENT DE LA PAGE) -->
-        <div class="logo-container" onclick="window.location.reload();" style="cursor: pointer; display: flex; align-items: center;" title="Rafraîchir la page">
-            <img src="logo.png" alt="Logo TPFV" style="height: 32px; margin-right: 10px;">
-            <h1 style="margin: 0; color: #0284C7;">TPFV</h1>
-        </div>
-
-        <div class="barre-recherche-globale">
-            <select id="filtre-recherche" class="select-header">
-                <option value="tout">Partout...</option>
-                <option value="nom">Nom</option>
-                <option value="code">Code</option>
-                <option value="telephone">Téléphone</option>
-            </select>
-            <input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header">
-        </div>
-
-        <div class="onglets">
-            <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
-            <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
-            <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
-            <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
-            <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
-        </div>
-    </header>
+    <div id="application-principale" class="section-cachee">
+        <header class="en-tete">
+            <!-- LOGO CLIQUABLE (RAFRAÎCHISSEMENT) -->
+            <div class="logo-container" onclick="window.location.reload();" style="cursor: pointer; display: flex; align-items: center;" title="Rafraîchir la page">
+                <img src="logo.png" alt="Logo TPFV" style="height: 32px; margin-right: 10px;">
+                <h1 style="margin: 0; color: #0284C7;">TPFV</h1>
+            </div>
+            
+            <div class="barre-recherche-globale">
+                <select id="filtre-recherche" class="select-header">
+                    <option value="tout">Partout...</option>
+                    <option value="nom">Nom</option>
+                    <option value="code">Code</option>
+                    <option value="telephone">Téléphone</option>
+                </select>
+                <input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header">
+            </div>
+            <div class="onglets">
+                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
+                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
+                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
+                <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
+                <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
+            </div>
+        </header>
 
         <main class="conteneur">
             <!-- SECTION PATIENTS -->
@@ -142,7 +141,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- BLOC DYNAMIQUE RDV SPÉCIALISTE (DATE & HORAIRE) -->
+                                        <!-- BLOC DYNAMIQUE RDV SPÉCIALISTE -->
                                         <div id="bloc_rdv_specialiste" class="grille-2" style="display:none; margin-top:12px; background:rgba(2,132,199,0.06); padding:10px; border-radius:8px; border:1px solid #BAE6FD;">
                                             <div class="champ-groupe">
                                                 <label style="color:#0284C7; font-weight:bold;">📅 Date du RDV Spécialiste</label>
@@ -166,6 +165,7 @@
                                         </div>
                                     </div>
 
+                                    <!-- CHAMPS MÉDICAUX (Masqués automatiquement pour l'Agent) -->
                                     <div id="champs-medicaux">
                                         <div class="section-form-bloc">
                                             <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS MÉDICAUX</div>
@@ -345,26 +345,29 @@
                     <div class="champ-groupe"><label>Contact d'urgence</label><input type="text" id="edit_contact_urgence"></div>
                 </div>
 
-                <div class="section-form-bloc">
-                    <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS MÉDICAUX</div>
-                    <div class="grille-2">
-                        <div class="champ-groupe"><label>Allergies</label><input type="text" id="edit_allergies"></div>
-                        <div class="champ-groupe"><label>Maladies chroniques</label><input type="text" id="edit_maladies_chroniques"></div>
-                        <div class="champ-groupe"><label>Chirurgies</label><input type="text" id="edit_chirurgies"></div>
-                        <div class="champ-groupe"><label>Traitements en cours</label><input type="text" id="edit_traitements_en_cours"></div>
+                <!-- CHAMPS MÉDICAUX ÉDITION (Masqués pour l'Agent) -->
+                <div id="edit_champs-medicaux">
+                    <div class="section-form-bloc">
+                        <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS MÉDICAUX</div>
+                        <div class="grille-2">
+                            <div class="champ-groupe"><label>Allergies</label><input type="text" id="edit_allergies"></div>
+                            <div class="champ-groupe"><label>Maladies chroniques</label><input type="text" id="edit_maladies_chroniques"></div>
+                            <div class="champ-groupe"><label>Chirurgies</label><input type="text" id="edit_chirurgies"></div>
+                            <div class="champ-groupe"><label>Traitements en cours</label><input type="text" id="edit_traitements_en_cours"></div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="section-form-bloc">
-                    <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
-                    <div class="champ-groupe"><label>Motif</label><textarea id="edit_motif_visite" rows="2"></textarea></div>
-                    <div class="champ-groupe"><label>Diagnostic</label><textarea id="edit_diagnostic" rows="2"></textarea></div>
-                    <div class="grille-vitals">
-                        <div class="champ-groupe"><label>Temp</label><input type="text" id="edit_vit_temp"></div>
-                        <div class="champ-groupe"><label>Poids</label><input type="text" id="edit_vit_poids"></div>
-                        <div class="champ-groupe"><label>Pouls</label><input type="text" id="edit_vit_pouls"></div>
-                        <div class="champ-groupe"><label>Sys</label><input type="text" id="edit_vit_sys"></div>
-                        <div class="champ-groupe"><label>Dia</label><input type="text" id="edit_vit_dia"></div>
+                    <div class="section-form-bloc">
+                        <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
+                        <div class="champ-groupe"><label>Motif</label><textarea id="edit_motif_visite" rows="2"></textarea></div>
+                        <div class="champ-groupe"><label>Diagnostic</label><textarea id="edit_diagnostic" rows="2"></textarea></div>
+                        <div class="grille-vitals">
+                            <div class="champ-groupe"><label>Temp</label><input type="text" id="edit_vit_temp"></div>
+                            <div class="champ-groupe"><label>Poids</label><input type="text" id="edit_vit_poids"></div>
+                            <div class="champ-groupe"><label>Pouls</label><input type="text" id="edit_vit_pouls"></div>
+                            <div class="champ-groupe"><label>Sys</label><input type="text" id="edit_vit_sys"></div>
+                            <div class="champ-groupe"><label>Dia</label><input type="text" id="edit_vit_dia"></div>
+                        </div>
                     </div>
                 </div>
 
