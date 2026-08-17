@@ -1,0 +1,458 @@
+/* =========================================================================
+   THÈME HOSPITALIER MODERNE & RESPONSIVE COMPLET - TPFV
+   ========================================================================= */
+
+:root {
+    --bleu-primaire: #0284C7;
+    --bleu-fonce: #0369A1;
+    --bleu-clair: #E0F2FE;
+    --vert-soin: #0D9488;
+    --vert-clair: #CCFBF1;
+    --rouge-alerte: #DC2626;
+    --rouge-clair: #FEE2E2;
+    --fond-page: #F8FAFC;
+    --fond-carte: #FFFFFF;
+    --texte-sombre: #0F172A;
+    --texte-clair: #475569;
+    --bordure: #E2E8F0;
+    --ombre: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --ombre-survol: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* Thème Sombre */
+body.dark-theme {
+    --fond-page: #0F172A;
+    --fond-carte: #1E293B;
+    --texte-sombre: #F8FAFC;
+    --texte-clair: #94A3B8;
+    --bordure: #334155;
+    --bleu-clair: #1E3A8A;
+    --vert-clair: #064E3B;
+    --rouge-clair: #7F1D1D;
+}
+
+/* Base Reset */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+body { background-color: var(--fond-page); color: var(--texte-sombre); min-height: 100vh; transition: background-color 0.3s ease, color 0.3s ease; }
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade { animation: fadeIn 0.25s ease-out forwards; }
+.section-cachee { display: none !important; }
+.section-visible { display: block; }
+
+/* =========================================================================
+   ÉCRAN DE CONNEXION MODERNE & EFFET DE VERRE (GLASSMORPHISM)
+   ========================================================================= */
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* 1. Conteneur principal (Plein écran adaptatif) */
+#ecran-connexion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100dvh;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background-color: #0284C7;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.20)), url('logo.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 100% 100% !important;
+}
+
+/* 2. Carte de connexion semi-transparente (Effet Verre Dépoli) */
+.carte-connexion {
+    /* Fond blanc semi-transparent à 85% */
+    background: rgba(134, 132, 132, 0.40) !important;
+    
+    /* Floutage d'arrière-plan (Glassmorphism) */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Compatibilité avec les navigateurs Safari */
+    
+    /* Contour lumineux style verre */
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    
+    padding: 35px 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 25px 45px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    animation: fadeIn 0.35s ease-out;
+}
+
+/* 3. Logo et Titre dans la carte */
+.logo-connexion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.icone-logo-app {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-bottom: 6px;
+}
+
+.logo-connexion h2 {
+    color: #0284C7;
+    font-size: 25px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.sous-titre-connexion {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 22px;
+}
+
+/* 4. Formulaire & Champs de saisie */
+.champ-groupe-connexion {
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.champ-groupe-connexion label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 6px;
+}
+
+.champ-groupe-connexion select,
+.champ-groupe-connexion input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1.5px solid rgba(203, 213, 225, 0.9);
+    border-radius: 10px;
+    font-size: 13.5px;
+    
+    /* Champs légèrement transparents */
+    background-color: rgba(255, 255, 255, 0.85);
+    color: #0F172A;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.champ-groupe-connexion input:focus,
+.champ-groupe-connexion select:focus {
+    border-color: #0284C7;
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.2);
+}
+
+/* 5. Bouton d'accès moderne */
+.btn-connexion-unique {
+    width: 100%;
+    padding: 12px;
+    background: #0284C7;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 6px;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+.btn-connexion-unique:hover {
+    background: #0369A1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45);
+}
+
+/* 6. Adaptation Mobile & Tablette */
+@media (max-width: 600px) {
+    #ecran-connexion {
+        padding: 15px;
+    }
+    .carte-connexion {
+        max-width: 90%;
+        padding: 25px 20px;
+    }
+}
+
+/* EN-TÊTE PRINCIPALE */
+.en-tete {
+    background: var(--fond-carte); border-bottom: 1px solid var(--bordure); padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--ombre); flex-wrap: wrap;
+}
+.logo-container h1 { font-size: 20px; color: var(--bleu-primaire); font-weight: 800; white-space: nowrap; }
+.barre-recherche-globale { display: flex; gap: 8px; flex: 1; max-width: 500px; min-width: 250px; }
+.select-header, .input-header {
+    padding: 8px 12px; border: 1px solid var(--bordure); border-radius: 8px; font-size: 13px;
+    background: var(--fond-page); color: var(--texte-sombre); outline: none;
+}
+.input-header { flex: 1; width: 100%; }
+.onglets { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.onglet {
+    padding: 8px 12px; border: 1px solid var(--bordure); border-radius: 8px; background: transparent;
+    color: var(--texte-sombre); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.onglet:hover, .onglet.actif { background: var(--bleu-clair); color: var(--bleu-primaire); border-color: var(--bleu-primaire); }
+
+/* LAYOUT PRINCIPAL */
+.conteneur { padding: 20px 15px; max-width: 1300px; margin: 0 auto; }
+.conteneur-layout-sidebar { display: grid; grid-template-columns: 240px 1fr; gap: 20px; }
+
+/* SIDEBAR GAUCHE */
+.barre-laterale-gauche {
+    background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 15px;
+    height: fit-content; box-shadow: var(--ombre);
+}
+.titre-menu-sidebar { font-size: 11px; font-weight: 800; color: var(--texte-clair); letter-spacing: 0.5px; display: block; margin-bottom: 10px; }
+.btn-sidebar {
+    width: 100%; padding: 10px 12px; text-align: left; background: transparent; border: none; border-radius: 8px;
+    color: var(--texte-sombre); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 4px; transition: all 0.2s;
+}
+.btn-sidebar:hover, .btn-sidebar.actif { background: var(--bleu-clair); color: var(--bleu-primaire); }
+
+/* CARTES ET BLOCS MULTI-SECTIONS */
+.carte {
+    background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 20px;
+    box-shadow: var(--ombre); margin-bottom: 20px;
+}
+.carte.transparent { background: transparent; border: none; box-shadow: none; padding: 0; }
+.carte h2 { font-size: 17px; color: var(--texte-sombre); margin-bottom: 15px; font-weight: 700; }
+
+.section-form-bloc {
+    background: var(--fond-page); border: 1px solid var(--bordure); border-radius: 10px; padding: 15px; margin-bottom: 15px;
+}
+.titre-bloc-form { font-size: 13px; font-weight: 700; color: var(--bleu-primaire); margin-bottom: 10px; border-bottom: 1px solid var(--bordure); padding-bottom: 5px; }
+.titre-bloc-form.rouge { color: var(--rouge-alerte); }
+.titre-bloc-form.vert { color: var(--vert-soin); }
+
+/* GRILLES ET FORMULAIRES */
+.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grille-vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
+.champ-groupe { margin-bottom: 10px; }
+.champ-groupe label { display: block; font-size: 12px; font-weight: 600; color: var(--texte-clair); margin-bottom: 4px; }
+.champ-groupe input, .champ-groupe select, .champ-groupe textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--bordure); border-radius: 6px; font-size: 13px;
+    background: var(--fond-carte); color: var(--texte-sombre); outline: none;
+}
+.champ-groupe input:focus, .champ-groupe select:focus, .champ-groupe textarea:focus { border-color: var(--bleu-primaire); }
+
+/* BOUTONS D'ACTION ET EXPORT */
+.btn-principal {
+    padding: 10px 18px; background: var(--bleu-primaire); color: white; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s;
+}
+.btn-principal:hover { background: var(--bleu-fonce); }
+
+.btn-action-inv {
+    padding: 9px 15px; border: none; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; color: white; text-align: center;
+}
+.btn-action-inv.vert { background-color: var(--vert-soin); }
+.btn-action-inv.bleu { background-color: var(--bleu-primaire); }
+
+/* LISTE PATIENT ET BADGES */
+.liste-donnees { list-style: none; }
+.liste-donnees li {
+    background: var(--fond-carte); border: 1px solid var(--bordure); border-radius: 12px; padding: 16px;
+    margin-bottom: 12px; box-shadow: var(--ombre); animation: fadeIn 0.25s ease-out forwards;
+}
+.badge-paye { background: var(--vert-clair); color: var(--vert-soin); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.badge-non-paye { background: var(--rouge-clair); color: var(--rouge-alerte); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.badge-allergie { background: var(--rouge-clair); color: var(--rouge-alerte); padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block; }
+
+.bloc-vitals-card {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;
+    background: var(--fond-page); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--bordure); margin-top: 8px;
+}
+.vital-item { font-size: 12px; color: var(--texte-clair); }
+.vital-item strong { font-size: 12px; color: var(--texte-sombre); }
+
+/* TABLEAUX ET FLUIDITÉ */
+.conteneur-tableau-fluide { width: 100%; overflow-x: auto; }
+.tableau-inventaire { width: 100%; border-collapse: collapse; min-width: 500px; font-size: 13px; }
+.tableau-inventaire th, .tableau-inventaire td { padding: 10px; border-bottom: 1px solid var(--bordure); text-align: left; }
+.tableau-inventaire th { background: var(--fond-page); color: var(--texte-clair); font-weight: 700; }
+
+/* POPUP OVERLAY ALERTE */
+.overlay-alerte {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6);
+    display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.2s;
+}
+.boite-alerte {
+    background: #FFFFFF; padding: 20px; border-radius: 14px; max-width: 340px; width: 90%;
+    text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+.boite-alerte h3 { color: #0F172A; margin-bottom: 8px; font-size: 16px; }
+.boite-alerte p { color: #475569; font-size: 13px; margin-bottom: 15px; }
+.btn-alerte { padding: 8px 20px; background: #0284C7; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+/* MODALE ÉDITION PATIENT */
+#modal-edition {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6);
+    display: none; justify-content: center; align-items: center; z-index: 999; padding: 15px;
+}
+#modal-edition .carte { width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+
+/* =========================================================================
+   ADAPTATION SMARTPHONE ET NAVEGATEUR RÉDUIT (RESPONSIVE FIX)
+   ========================================================================= */
+@media (max-width: 768px) {
+    /* 1. Réorganisation propre de l'En-tête */
+    .en-tete {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .logo-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
+    .barre-recherche-globale {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .onglets {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .onglet {
+        flex: 1;
+        text-align: center;
+        padding: 7px 4px;
+        font-size: 11px;
+    }
+
+    /* 2. Menu latéral passe au-dessus du contenu */
+    .conteneur-layout-sidebar {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .barre-laterale-gauche {
+        width: 100%;
+    }
+
+    .menu-sidebar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .titre-menu-sidebar {
+        display: none; /* Masqué sur mobile pour gagner de la place */
+    }
+
+    .btn-sidebar {
+        margin-bottom: 0;
+        text-align: center;
+    }
+
+    /* 3. Passages des formulaires à 1 colonne */
+    .grille-2 {
+        grid-template-columns: 1fr;
+    }
+
+    /* 4. Cartes des patients en 1 seule colonne */
+    .liste-donnees li > div:first-child {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 8px;
+    }
+
+    .liste-donnees li .grille-2 {
+        grid-template-columns: 1fr;
+    }
+}
+/* =========================================================================
+   AJUSTEMENT ET AGRANDISSEMENT DU LOGO DE LA PAGE D'ACCUEIL
+   ========================================================================= */
+.logo-connexion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+/* =========================================================================
+   CORRECTION DU DÉPASSEMENT DE TEXTE DANS LES DOSSIERS MÉDICAUX
+   ========================================================================= */
+
+/* 1. Force la carte patient à respecter la largeur de l'écran */
+.liste-donnees li {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* 2. Force tous les textes et paragraphes internes à aller à la ligne */
+.liste-donnees li p,
+.liste-donnees li span,
+.liste-donnees li div {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+}
+/* Style moderne et dynamique pour les cartes de services */
+.service-checkbox-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    background-color: #F8FAFC;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease-in-out;
+    user-select: none;
+}
+
+.service-checkbox-card:hover {
+    border-color: #0284C7;
+    background-color: #F0F9FF;
+}
+
+/* Style de la carte lorsque la case est cochée */
+.service-checkbox-card:has(input:checked) {
+    border-color: #0284C7;
+    background-color: #E0F2FE;
+    color: #0369A1;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(2, 132, 199, 0.2);
+}
+
+.service-checkbox-card input[type="checkbox"] {
+    accent-color: #0284C7;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}

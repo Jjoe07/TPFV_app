@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPFV - Dossier Médical & Gestion</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .bloc-analyses { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; margin-top: 15px; margin-bottom: 15px; }
+        .categorie-analyses { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #CBD5E1; }
+        .categorie-analyses.active { display: block; }
+        .grille-analyses { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .analyse-item { font-size: 12px; cursor: pointer; display: flex; align-items: flex-start; gap: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="ecran-connexion" class="section-visible">
+        <div class="carte-connexion">
+            <div class="logo-connexion"><img src="logo.png" alt="Logo TPFV" class="icone-logo-app"><h2>TPFV</h2></div>
+            <p class="sous-titre-connexion">Veuillez vous identifier</p>
+            <form onsubmit="event.preventDefault(); seConnecter();">
+                <div class="champ-groupe-connexion"><label>Votre rôle</label><select id="choix-role" required><option value="accueil_pharmacie">🏥 Accueil / Pharmacie</option><option value="medecin_paramed">🩺 Médecin / Paramed</option><option value="admin">🛡️ Admin</option></select></div>
+                <div class="champ-groupe-connexion"><label>Mot de passe</label><input type="password" id="mot-de-passe" placeholder="••••••••" required></div>
+                <button type="submit" class="btn-connexion-unique">Accéder</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="application-principale" class="section-cachee">
+        <header class="en-tete">
+            <div class="logo-container" onclick="window.location.reload();" style="cursor: pointer; display: flex; align-items: center;" title="Rafraîchir la page"><img src="logo.png" alt="Logo TPFV" style="height: 32px; margin-right: 10px;"><h1 style="margin: 0; color: #0284C7;">TPFV</h1></div>
+            <div class="barre-recherche-globale"><select id="filtre-recherche" class="select-header"><option value="tout">Partout...</option><option value="nom">Nom</option><option value="code">Code</option><option value="telephone">Téléphone</option></select><input type="text" id="champ-recherche" placeholder="Rechercher..." class="input-header"></div>
+            <div class="onglets">
+                <button id="btn-patients" class="onglet actif" onclick="changerOnglet('patients')">👥 Patients</button>
+                <button id="btn-inventaire" class="onglet" onclick="changerOnglet('inventaire')" style="display:none;">📦 Inventaire</button>
+                <button id="btn-personnel" class="onglet" onclick="changerOnglet('personnel')" style="display:none;">👩‍⚕️ Personnel</button>
+                <button id="btn-parametres" class="onglet" onclick="changerOnglet('parametres')">⚙️ Paramètres</button>
+                <button id="btn-compte" class="onglet" onclick="changerOnglet('compte')">🔑 Mon Compte</button>
+                <button class="onglet" onclick="basculerTheme()">🌙 Thème</button>
+                <button class="onglet" style="color:var(--rouge-alerte)" onclick="seDeconnecter()">Déconnexion</button>
+            </div>
+        </header>
+
+        <main class="conteneur">
+            <section id="section-patients" class="section-visible">
+                <div class="conteneur-layout-sidebar">
+                    <aside class="barre-laterale-gauche">
+                        <span class="titre-menu-sidebar">DOSSIERS PATIENTS</span>
+                        <div class="menu-sidebar">
+                            <button id="btn-sous-liste" class="btn-sidebar actif" onclick="changerSousOngletPatients('liste')">📋 Liste (<span id="total-dossiers-badge">0</span>)</button>
+                            <button id="btn-sous-form" class="btn-sidebar" onclick="changerSousOngletPatients('form')">➕ Nouveau Patient</button>
+                        </div>
+                    </aside>
+
+                    <div class="contenu-central">
+                        <div id="zone-liste-patients" class="section-visible"><ul id="listePatients" class="liste-donnees"></ul><div id="pagination-patients" style="display:flex;justify-content:center;gap:10px;margin-top:15px;"></div></div>
+
+                        <div id="zone-form-patient" class="section-cachee">
+                            <div class="carte">
+                                <h2>Nouveau Dossier Patient</h2>
+                                <form id="formPatient">
+                                    <div class="grille-2">
+                                        <div class="champ-groupe"><label>Nom et Prénom *</label><input type="text" id="nom_complet" required></div>
+                                        <div class="champ-groupe"><label>Téléphone *</label><input type="text" id="telephone" required></div>
+                                        <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="date_naissance"></div>
+                                        <div class="champ-groupe"><label>Sexe</label><select id="sexe"><option value="Masculin">Masculin</option><option value="Féminin">Féminin</option></select></div>
+                                        <div class="champ-groupe"><label>1ère consultation</label><input type="date" id="date_entree"></div>
+                                        <div class="champ-groupe"><label>Date de visite</label><input type="date" id="date_visite"></div>
+                                    </div>
+
+                                    <div class="section-form-bloc">
+                                        <div class="titre-bloc-form">🩺 TYPE DE CONSULTATION & SERVICES</div>
+                                        <div class="grille-2">
+                                            <div class="champ-groupe">
+                                                <label>Type de consultation</label>
+                                                <select id="type_consultation" onchange="gererChangementTypeConsultation('type_consultation', 'bloc_rdv_specialiste', 'services_specifiques')">
+                                                    <option value="Consultation généraliste">1 - Consultation généraliste</option>
+                                                    <option value="Consultation spécialisée">2 - Consultation spécialisée</option>
+                                                    <option value="Rendez-vous spécialiste">3 - Rendez-vous spécialiste</option>
+                                                    <option value="Autres services">4 - Autres services</option>
+                                                </select>
+                                            </div>
+                                            <div class="champ-groupe">
+                                                <label>Soins / Spécialités associées :</label>
+                                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px; margin-top:8px;">
+                                                    <label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="services_specifiques" value="Médecine interne" data-category="1"> 🩺 Médecine interne</label>
+                                                    <label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="services_specifiques" value="Soins infirmiers" data-category="1"> 🩺 Soins infirmiers</label>
+                                                    <label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="services_specifiques" value="Dentisterie" data-category="1"> 🦷 Dentisterie</label>
+                                                    <label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="services_specifiques" value="Gyneco / Prénatale" data-category="2"> 🤰 Gynéco / Prénatale</label>
+                                                    <label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="services_specifiques" value="Échographie" data-category="2"> 📡 Échographie</label>
+                                                    <label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="services_specifiques" value="Ophtalmologie" data-category="2"> 👁️ Ophtalmologie</label>
+                                                    <label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="services_specifiques" value="Cardiologie" data-category="3"> ❤️ Cardiologie</label>
+                                                    <label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="services_specifiques" value="Pédiatre" data-category="3"> 👶 Pédiatre</label>
+                                                    <label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="services_specifiques" value="Neuro" data-category="3"> 🧠 Neuro</label>
+                                                    <label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="services_specifiques" value="Neuro psy" data-category="3"> 🧘 Neuro psy</label>
+                                                    <label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="services_specifiques" value="ORL" data-category="4"> 👂 ORL</label>
+                                                    <label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="services_specifiques" value="Consultation naturelle" data-category="4"> 🌿 Consultation naturelle</label>
+                                                    <label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="services_specifiques" value="Réflexothérapie" data-category="4"> 💆 Réflexothérapie</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="bloc_rdv_specialiste" class="grille-2" style="display:none; margin-top:12px; background:rgba(2,132,199,0.06); padding:10px; border-radius:8px; border:1px solid #BAE6FD;"><div class="champ-groupe"><label style="color:#0284C7; font-weight:bold;">📅 Date du RDV</label><input type="date" id="date_rdv_specialiste"></div><div class="champ-groupe"><label style="color:#0284C7; font-weight:bold;">⏰ Heure</label><input type="time" id="heure_rdv_specialiste"></div></div>
+                                    </div>
+
+                                    <div class="grille-2"><div class="champ-groupe"><label>Adresse</label><input type="text" id="adresse"></div><div class="champ-groupe"><label>Contact d'urgence</label><input type="text" id="contact_urgence"></div></div>
+
+                                    <div class="section-form-bloc" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:12px; margin-top:12px;">
+                                        <div class="titre-bloc-form" style="color:#0F172A; display:flex; justify-content:space-between; align-items:center;"><span>💊 FACTURATION & MÉDICAMENTS</span><button type="button" onclick="ajouterLigneMedicament('conteneur-meds-creation')" style="background:#0284C7; color:white; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">➕ Ajouter un médicament</button></div>
+                                        <div id="conteneur-meds-creation" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+                                        <div style="text-align:right; margin-top:10px; font-size:14px; font-weight:bold; color:#0284C7;">Total Médicaments : <span id="total-facture-creation">0</span> Ar</div>
+
+                                        <div class="champ-groupe" style="margin-top:12px; padding-top:10px; border-top:1px dashed #CBD5E1;">
+                                            <label style="font-weight:bold; color:#0F172A;">Statut du paiement :</label>
+                                            <div style="display:flex; gap:12px; margin-top:6px; align-items:center; flex-wrap:wrap;"><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_creation" value="Payé" onchange="gererCocheUniqueStatut('cb_statut_paiement_creation', this)"> 🟢 Payé</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_creation" value="Reste à payer" onchange="gererCocheUniqueStatut('cb_statut_paiement_creation', this)"> 🟡 Reste à payer</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_creation" value="Non payé" checked onchange="gererCocheUniqueStatut('cb_statut_paiement_creation', this)"> 🔴 Non payé</label></div>
+                                        </div>
+                                        <div class="champ-groupe" style="margin-top:10px;"><label style="font-weight:bold; color:#0F172A;">📝 Remarque paiement :</label><input type="text" id="remarque_paiement" placeholder="Ex: Acompte de 10 000 Ar versé..." style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px; width:100%; box-sizing:border-box;"></div>
+                                    </div>
+
+                                    <div id="champs-medicaux">
+                                        <div class="section-form-bloc">
+                                            <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS</div>
+                                            <div class="grille-2">
+                                                <div class="champ-groupe"><label>Allergies connues</label><input type="text" id="allergies"></div><div class="champ-groupe"><label>Antécédents médicaux</label><input type="text" id="maladies_chroniques"></div><div class="champ-groupe"><label>Antécédents chirurgicaux</label><input type="text" id="chirurgies"></div><div class="champ-groupe"><label>Antécédents familiaux</label><input type="text" id="antecedents_familiaux"></div><div class="champ-groupe"><label>Habitudes toxiques</label><input type="text" id="habitudes_toxiques"></div><div class="champ-groupe"><label>Traitements en cours</label><input type="text" id="traitements_en_cours"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="section-form-bloc">
+                                            <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
+                                            <div class="grille-vitals" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap:10px; margin-bottom:15px;">
+                                                <div class="champ-groupe"><label>🌡️ Temp</label><input type="text" id="vit_temp"></div><div class="champ-groupe"><label>秤 Poids</label><input type="text" id="vit_poids"></div><div class="champ-groupe"><label>💓 Pouls</label><input type="text" id="vit_pouls"></div><div class="champ-groupe"><label>🩸 Sys</label><input type="text" id="vit_sys"></div><div class="champ-groupe"><label>🩸 Dia</label><input type="text" id="vit_dia"></div><div class="champ-groupe"><label>🫁 Sat O2</label><input type="text" id="vit_spo2"></div>
+                                            </div>
+                                            <div class="champ-groupe" style="margin-bottom:15px;"><label>Prescription</label><textarea id="motif_visite" rows="2"></textarea></div>
+                                            <div class="champ-groupe"><label>Diagnostic / avis médical</label><textarea id="diagnostic" rows="2"></textarea></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bloc-analyses">
+                                        <div style="font-weight:bold; color:#0D9488; margin-bottom:8px;">🔬 Analyses Médicales</div>
+                                        <div class="champ-groupe"><select id="select_categorie_analyse_creation" onchange="afficherCategorieAnalyse('select_categorie_analyse_creation', 'bloc_categories_analyses_creation')"><option value="">-- Sélectionner une catégorie d'analyse --</option><option value="cat1">1. Hématologie & Hémostase</option><option value="cat2">2. Biochimie Médicale</option><option value="cat3">3. Immunologie & Sérologie</option><option value="cat4">4. Hormonologie</option><option value="cat5">5. Marqueurs Tumoraux</option><option value="cat6">6. Bactériologie</option><option value="cat7">7. Parasitologie</option><option value="cat8">8. Analyses d'Urines</option><option value="cat9">9. Liquides Biologiques</option></select></div>
+                                        <div id="bloc_categories_analyses_creation">
+                                            <div id="cat1_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Hématologie & Hémostase</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="NFS"> NFS</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="VSH"> VSH</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Réticulocytes"> Réticulocytes</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Groupage Sanguin"> Groupage Sanguin</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Test d'Emmel"> Test d'Emmel</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TP (Taux Prothrombine)"> TP (Taux Prothrombine)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TCA"> TCA</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TQ"> TQ</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TS"> TS</label></div></div>
+                                            <div id="cat2_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Biochimie Médicale</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Glycémie à jeun"> Glycémie à jeun</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="HbA1c"> HbA1c</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Créatinine"> Créatinine</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Azotémie (Urée)"> Azotémie (Urée)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Acide Urique"> Acide Urique</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Cholestérol Total"> Cholestérol Total</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="HDL"> HDL</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="LDL"> LDL</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Triglycérides"> Triglycérides</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Transaminases (ASAT/ALAT)"> Transaminases (ASAT/ALAT)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Gamma-GT"> Gamma-GT</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="PAL"> PAL</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Bilirubine"> Bilirubine</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="CRP"> CRP</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Ionogramme"> Ionogramme</label></div></div>
+                                            <div id="cat3_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Immunologie & Sérologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="HIV (VIH)"> HIV (VIH)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Hépatite B (Ag HBs)"> Hépatite B (Ag HBs)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Hépatite C"> Hépatite C</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Rubéole"> Rubéole</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Syphilis (TPHA-VDRL)"> Syphilis (TPHA-VDRL)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Toxoplasmose"> Toxoplasmose</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Widal-Félix"> Widal-Félix</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TDR Paludisme"> TDR Paludisme</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="ASLO"> ASLO</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Facteur Rhumatoïde"> Facteur Rhumatoïde</label></div></div>
+                                            <div id="cat4_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Hormonologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="TSH"> TSH</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="T3"> T3</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="T4"> T4</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="FSH / LH"> FSH / LH</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Béta-HCG (Grossesse)"> Béta-HCG (Grossesse)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Testostérone"> Testostérone</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Progestérone"> Progestérone</label></div></div>
+                                            <div id="cat5_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Marqueurs Tumoraux</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="PSA Total"> PSA Total</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="AFP"> AFP</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="CA 15-3"> CA 15-3</label></div></div>
+                                            <div id="cat6_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Bactériologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="ECBU"> ECBU</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Hémoculture"> Hémoculture</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Coproculture"> Coproculture</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="FCV"> FCV</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="PV / PU"> PV / PU</label></div></div>
+                                            <div id="cat7_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Parasitologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Goutte Épaisse"> Goutte Épaisse</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Selle KAOP"> Selle KAOP</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Bilharziose Urinaire"> Bilharziose Urinaire</label></div></div>
+                                            <div id="cat8_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Analyses d'Urines</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Urines (ASA)"> Urines (ASA)</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Protéinurie 24h"> Protéinurie 24h</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Microalbuminurie"> Microalbuminurie</label></div></div>
+                                            <div id="cat9_creation" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Liquides Biologiques</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Cyto-Chimie liquide"> Cyto-Chimie liquide</label><label class="analyse-item"><input type="checkbox" name="analyses_creation" value="Bactériologie liquide"> Bactériologie liquide</label></div></div>
+                                        </div>
+                                    </div>
+
+                                    <div id="bloc-hospitalisation" class="section-form-bloc" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:12px; margin-top:12px;">
+                                        <div style="font-weight:bold; color:#0F172A; margin-bottom:6px;">🏥 HOSPITALISATION</div>
+                                        <div style="display:flex; gap:15px; margin-bottom:10px; align-items:center; flex-wrap:wrap;"><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_creation" value="01 - Oui" onchange="gererCocheUniqueHospit('cb_hospit_creation', this)"> 🟢 01 - Oui</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_creation" value="02 - Non" checked onchange="gererCocheUniqueHospit('cb_hospit_creation', this)"> 🔴 02 - Non</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_creation" value="03 - Transfert externe" onchange="gererCocheUniqueHospit('cb_hospit_creation', this)"> 🟠 03 - Transfert externe</label></div>
+                                        <div class="champ-groupe"><textarea id="hospitalisation_details" rows="2" placeholder="Durée, motif ou détails d'hospitalisation..."></textarea></div>
+                                    </div>
+
+                                    <div class="grille-2" style="margin-top:12px;"><div class="champ-groupe"><label>Contrôle Requis</label><select id="besoin_controle"><option value="Non">Non</option><option value="Oui">Oui</option></select></div><div class="champ-groupe"><label>Prochain RDV</label><input type="date" id="prochain_rdv"></div></div>
+                                    <div class="champ-groupe" style="margin-top:10px;"><label>Notes complémentaires</label><textarea id="notes" rows="2"></textarea></div>
+                                    <button type="submit" class="btn-principal" style="margin-top:15px;">💾 Enregistrer le dossier</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION INVENTAIRE -->
+            <section id="section-inventaire" class="section-cachee">
+                <div class="carte" style="max-width:1200px; margin:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <h2>📦 Inventaire Pharmaceutique (Général)</h2>
+                        <div style="display:flex; gap:10px; width:100%; max-width:400px; align-items:center;">
+                            <input type="text" id="recherche-inventaire" placeholder="Rechercher par désignation..." style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; flex-grow:1;">
+                            <button id="btn-nouvel-article" onclick="ouvrirModalInventaire()" class="btn-principal" style="background:#0D9488; white-space:nowrap;">➕ Nouvel Article</button>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:15px;">
+                        <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:15px; border-radius:8px; text-align:center;"><span style="font-size:12px; color:#0369A1; font-weight:bold;">TOTAL RÉFÉRENCES</span><div id="total-articles-inventaire" style="font-size:24px; color:#0284C7; font-weight:bold; margin-top:5px;">0</div></div>
+                        <div id="bloc-valeur-stock" style="background:#F0FDF4; border:1px solid #BFE8E5; padding:15px; border-radius:8px; text-align:center;"><span style="font-size:12px; color:#0F766E; font-weight:bold;">VALEUR TOTALE STOCK</span><div id="total-valeur-inventaire" style="font-size:24px; color:#0D9488; font-weight:bold; margin-top:5px;">0 Ar</div></div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">
+                            <thead style="background:#1E293B; color:white;">
+                                <tr>
+                                    <th style="padding:10px;">Référence</th>
+                                    <th style="padding:10px;">Désignation Produit</th>
+                                    <th style="padding:10px;">Catégorie</th>
+                                    <th style="padding:10px;">Péremption</th>
+                                    <th style="padding:10px; text-align:center;">Stock Restant</th>
+                                    <th style="padding:10px; text-align:center;">Nombre</th>
+                                    <th style="padding:10px; text-align:right;">P.U (Ar)</th>
+                                    <th id="th-valeur-stock" style="padding:10px; text-align:right;">Valeur (Ar)</th>
+                                    <th id="th-actions-stock" style="padding:10px; text-align:center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-inventaire" style="color:#0F172A;"></tbody>
+                        </table>
+                    </div>
+                    <div id="pagination-inventaire" style="display:flex;justify-content:center;gap:10px;margin-top:15px;"></div>
+                </div>
+            </section>
+
+            <!-- SECTION PERSONNEL -->
+            <section id="section-personnel" class="section-cachee">
+                <div class="carte" style="max-width:1200px; margin:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <h2>👩‍⚕️ Gestion du Personnel (Officiel)</h2>
+                        <div style="display:flex; gap:10px; width:100%; max-width:400px; align-items:center;">
+                            <input type="text" id="recherche-personnel" placeholder="Rechercher un employé ou un poste..." style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; flex-grow:1;">
+                            <button id="btn-nouvel-employe" onclick="ouvrirModalPersonnel()" class="btn-principal" style="background:#0284C7; white-space:nowrap;">➕ Ajouter un employé</button>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:15px;">
+                        <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:15px; border-radius:8px; text-align:center;">
+                            <span style="font-size:12px; color:#0369A1; font-weight:bold;">TOTAL EMPLOYÉS</span>
+                            <div id="total-personnel-badge" style="font-size:24px; color:#0284C7; font-weight:bold; margin-top:5px;">0</div>
+                        </div>
+
+                        <!-- CARTE MASSE SALARIALE NETTE AVEC BOUTON DE SUIVI MENSEUL -->
+                        <div style="background:#F0FDF4; border:1px solid #BFE8E5; padding:15px; border-radius:8px; text-align:center; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                            <span style="font-size:12px; color:#0F766E; font-weight:bold;">MASSE SALARIALE NETTE</span>
+                            <div id="total-masse-salariale-badge" style="font-size:24px; color:#0D9488; font-weight:bold; margin-top:5px;">0 Ar</div>
+                            <button onclick="ouvrirModalSuiviGlobalPaie()" style="margin-top:8px; background:#0D9488; color:white; border:none; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📊 Suivi Général Mensuel</button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">
+                            <thead style="background:#1E293B; color:white;">
+                                <tr>
+                                    <th style="padding:10px;">Matricule</th>
+                                    <th style="padding:10px;">Nom et Prénom</th>
+                                    <th style="padding:10px;">Poste</th>
+                                    <th style="padding:10px;">Date d'embauche</th>
+                                    <th style="padding:10px; text-align:right;">Salaire Brut (Ar)</th>
+                                    <th style="padding:10px; text-align:right;">Salaire Net (Ar)</th>
+                                    <th style="padding:10px; text-align:center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-personnel" style="color:#0F172A;"></tbody>
+                        </table>
+                    </div>
+                    <div id="pagination-personnel" style="display:flex;justify-content:center;gap:10px;margin-top:15px;"></div>
+                </div>
+            </section>
+
+            <section id="section-parametres" class="section-cachee">
+                <div class="carte"><h2>Mdp Équipe</h2><form id="formResetMdpEquipe" style="display:flex; gap:10px; align-items:center;"><select id="role-a-modifier" class="select-header"><option value="accueil_pharmacie">Accueil / Pharmacie</option><option value="medecin_paramed">Médecin / Paramed</option></select><input type="password" id="nouveau-mdp-equipe" placeholder="Nouveau mot de passe" class="input-header" required><button type="submit" class="btn-principal" style="background:#EAB308;">Mettre à jour</button></form></div>
+            </section>
+            <section id="section-compte" class="section-cachee">
+                <div class="carte"><h2>Modifier mot de passe Admin</h2><form id="formResetMdpAdmin"><div class="champ-groupe"><label>Ancien mot de passe</label><input type="password" id="ancien-mdp-admin" required></div><div class="champ-groupe"><label>Nouveau mot de passe</label><input type="password" id="nouveau-mdp-admin" required></div><button type="submit" class="btn-principal">Mettre à jour</button></form></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODALE ÉDITION PATIENT -->
+    <div id="modal-edition">
+        <div class="carte">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>✏️ Modifier Dossier Patient</h2>
+                <button onclick="fermerModalEdition()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+            <form id="formEditPatient">
+                <input type="hidden" id="edit_id">
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Nom et Prénom *</label><input type="text" id="edit_nom_complet" required></div>
+                    <div class="champ-groupe"><label>Téléphone *</label><input type="text" id="edit_telephone" required></div>
+                    <div class="champ-groupe"><label>Date de naissance</label><input type="date" id="edit_date_naissance"></div>
+                    <div class="champ-groupe"><label>Sexe</label><select id="edit_sexe"><option value="Masculin">Masculin</option><option value="Féminin">Féminin</option></select></div>
+                    <div class="champ-groupe"><label>1ère consultation</label><input type="date" id="edit_date_entree"></div>
+                    <div class="champ-groupe"><label>Date de visite</label><input type="date" id="edit_date_visite"></div>
+                </div>
+
+                <div class="section-form-bloc">
+                    <div class="titre-bloc-form">🩺 TYPE DE CONSULTATION & SERVICES</div>
+                    <div class="grille-2">
+                        <div class="champ-groupe">
+                            <label>Type de consultation</label>
+                            <select id="edit_type_consultation" onchange="gererChangementTypeConsultation('edit_type_consultation', 'edit_bloc_rdv_specialiste', 'edit_services_specifiques')">
+                                <option value="Consultation généraliste">1 - Consultation généraliste</option><option value="Consultation spécialisée">2 - Consultation spécialisée</option><option value="Rendez-vous spécialiste">3 - Rendez-vous spécialiste</option><option value="Autres services">4 - Autres services</option>
+                            </select>
+                        </div>
+                        <div class="champ-groupe">
+                            <label>Soins / Spécialités associées :</label>
+                            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px; margin-top:8px;">
+                                <label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="edit_services_specifiques" value="Médecine interne" data-category="1"> 🩺 Médecine interne</label><label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="edit_services_specifiques" value="Soins infirmiers" data-category="1"> 🩺 Soins infirmiers</label><label class="service-checkbox-card" data-cat="1"><input type="checkbox" name="edit_services_specifiques" value="Dentisterie" data-category="1"> 🦷 Dentisterie</label>
+                                <label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="edit_services_specifiques" value="Gyneco / Prénatale" data-category="2"> 🤰 Gynéco / Prénatale</label><label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="edit_services_specifiques" value="Échographie" data-category="2"> 📡 Échographie</label><label class="service-checkbox-card" data-cat="2"><input type="checkbox" name="edit_services_specifiques" value="Ophtalmologie" data-category="2"> 👁️ Ophtalmologie</label>
+                                <label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="edit_services_specifiques" value="Cardiologie" data-category="3"> ❤️ Cardiologie</label><label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="edit_services_specifiques" value="Pédiatre" data-category="3"> 👶 Pédiatre</label><label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="edit_services_specifiques" value="Neuro" data-category="3"> 🧠 Neuro</label><label class="service-checkbox-card" data-cat="3"><input type="checkbox" name="edit_services_specifiques" value="Neuro psy" data-category="3"> 🧘 Neuro psy</label>
+                                <label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="edit_services_specifiques" value="ORL" data-category="4"> 👂 ORL</label><label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="edit_services_specifiques" value="Consultation naturelle" data-category="4"> 🌿 Consultation naturelle</label><label class="service-checkbox-card" data-cat="4"><input type="checkbox" name="edit_services_specifiques" value="Réflexothérapie" data-category="4"> 💆 Réflexothérapie</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="edit_bloc_rdv_specialiste" class="grille-2" style="display:none; margin-top:12px; background:rgba(2,132,199,0.06); padding:10px; border-radius:8px; border:1px solid #BAE6FD;"><div class="champ-groupe"><label style="color:#0284C7; font-weight:bold;">📅 Date du RDV</label><input type="date" id="edit_date_rdv_specialiste"></div><div class="champ-groupe"><label style="color:#0284C7; font-weight:bold;">⏰ Heure</label><input type="time" id="edit_heure_rdv_specialiste"></div></div>
+                </div>
+
+                <div class="grille-2"><div class="champ-groupe"><label>Adresse</label><input type="text" id="edit_adresse"></div><div class="champ-groupe"><label>Contact d'urgence</label><input type="text" id="edit_contact_urgence"></div></div>
+
+                <div class="section-form-bloc" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:12px; margin-top:12px;">
+                    <div class="titre-bloc-form" style="color:#0F172A; display:flex; justify-content:space-between; align-items:center;"><span>💊 FACTURATION & MÉDICAMENTS</span><button type="button" onclick="ajouterLigneMedicament('conteneur-meds-edition')" style="background:#0284C7; color:white; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">➕ Ajouter un médicament</button></div>
+                    <div id="conteneur-meds-edition" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+                    <div style="text-align:right; margin-top:10px; font-size:14px; font-weight:bold; color:#0284C7;">Total Médicaments : <span id="total-facture-edition">0</span> Ar</div>
+
+                    <div class="champ-groupe" style="margin-top:12px; padding-top:10px; border-top:1px dashed #CBD5E1;">
+                        <label style="font-weight:bold; color:#0F172A;">Statut du paiement :</label>
+                        <div style="display:flex; gap:12px; margin-top:6px; align-items:center; flex-wrap:wrap;"><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_edition" value="Payé" onchange="gererCocheUniqueStatut('cb_statut_paiement_edition', this)"> 🟢 Payé</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_edition" value="Reste à payer" onchange="gererCocheUniqueStatut('cb_statut_paiement_edition', this)"> 🟡 Reste à payer</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_statut_paiement_edition" value="Non payé" onchange="gererCocheUniqueStatut('cb_statut_paiement_edition', this)"> 🔴 Non payé</label></div>
+                    </div>
+                    <div class="champ-groupe" style="margin-top:10px;"><label style="font-weight:bold; color:#0F172A;">📝 Remarque paiement :</label><input type="text" id="edit_remarque_paiement" placeholder="Ex: Acompte de 10 000 Ar versé..." style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; font-size:12px; width:100%; box-sizing:border-box;"></div>
+                </div>
+
+                <div id="edit_champs-medicaux">
+                    <div class="section-form-bloc">
+                        <div class="titre-bloc-form rouge">⚠️ ANTÉCÉDENTS</div>
+                        <div class="grille-2"><div class="champ-groupe"><label>Allergies</label><input type="text" id="edit_allergies"></div><div class="champ-groupe"><label>Antécédents médicaux</label><input type="text" id="edit_maladies_chroniques"></div><div class="champ-groupe"><label>Antécédents chirurgicaux</label><input type="text" id="edit_chirurgies"></div><div class="champ-groupe"><label>Antécédents familiaux</label><input type="text" id="edit_antecedents_familiaux"></div><div class="champ-groupe"><label>Habitudes toxiques</label><input type="text" id="edit_habitudes_toxiques"></div><div class="champ-groupe"><label>Traitements en cours</label><input type="text" id="edit_traitements_en_cours"></div></div>
+                    </div>
+
+                    <div class="section-form-bloc">
+                        <div class="titre-bloc-form vert">📊 SUIVI & VITAUX</div>
+                        <div class="grille-vitals" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap:10px; margin-bottom:15px;">
+                            <div class="champ-groupe"><label>🌡️ Temp</label><input type="text" id="edit_vit_temp"></div><div class="champ-groupe"><label>秤 Poids</label><input type="text" id="edit_vit_poids"></div><div class="champ-groupe"><label>💓 Pouls</label><input type="text" id="edit_vit_pouls"></div><div class="champ-groupe"><label>🩸 Sys</label><input type="text" id="edit_vit_sys"></div><div class="champ-groupe"><label>🩸 Dia</label><input type="text" id="edit_vit_dia"></div><div class="champ-groupe"><label>🫁 Sat O2</label><input type="text" id="edit_vit_spo2"></div>
+                        </div>
+                        <div class="champ-groupe" style="margin-bottom:15px;"><label>Prescription</label><textarea id="edit_motif_visite" rows="2"></textarea></div>
+                        <div class="champ-groupe"><label>Diagnostic / avis médical</label><textarea id="edit_diagnostic" rows="2"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="bloc-analyses">
+                    <div style="font-weight:bold; color:#0D9488; margin-bottom:8px;">🔬 Analyses Médicales</div>
+                    <div class="champ-groupe"><select id="select_categorie_analyse_edition" onchange="afficherCategorieAnalyse('select_categorie_analyse_edition', 'bloc_categories_analyses_edition')"><option value="">-- Sélectionner une catégorie d'analyse --</option><option value="cat1">1. Hématologie & Hémostase</option><option value="cat2">2. Biochimie Médicale</option><option value="cat3">3. Immunologie & Sérologie</option><option value="cat4">4. Hormonologie</option><option value="cat5">5. Marqueurs Tumoraux</option><option value="cat6">6. Bactériologie</option><option value="cat7">7. Parasitologie</option><option value="cat8">8. Analyses d'Urines</option><option value="cat9">9. Liquides Biologiques</option></select></div>
+                    <div id="bloc_categories_analyses_edition">
+                        <div id="cat1_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Hématologie & Hémostase</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="NFS"> NFS</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="VSH"> VSH</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Réticulocytes"> Réticulocytes</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Groupage Sanguin"> Groupage Sanguin</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Test d'Emmel"> Test d'Emmel</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TP (Taux Prothrombine)"> TP (Taux Prothrombine)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TCA"> TCA</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TQ"> TQ</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TS"> TS</label></div></div>
+                        <div id="cat2_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Biochimie Médicale</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Glycémie à jeun"> Glycémie à jeun</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="HbA1c"> HbA1c</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Créatinine"> Créatinine</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Azotémie (Urée)"> Azotémie (Urée)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Acide Urique"> Acide Urique</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Cholestérol Total"> Cholestérol Total</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="HDL"> HDL</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="LDL"> LDL</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Triglycérides"> Triglycérides</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Transaminases (ASAT/ALAT)"> Transaminases (ASAT/ALAT)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Gamma-GT"> Gamma-GT</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="PAL"> PAL</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Bilirubine"> Bilirubine</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="CRP"> CRP</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Ionogramme"> Ionogramme</label></div></div>
+                        <div id="cat3_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Immunologie & Sérologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="HIV (VIH)"> HIV (VIH)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Hépatite B (Ag HBs)"> Hépatite B (Ag HBs)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Hépatite C"> Hépatite C</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Rubéole"> Rubéole</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Syphilis (TPHA-VDRL)"> Syphilis (TPHA-VDRL)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Toxoplasmose"> Toxoplasmose</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Widal-Félix"> Widal-Félix</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TDR Paludisme"> TDR Paludisme</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="ASLO"> ASLO</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Facteur Rhumatoïde"> Facteur Rhumatoïde</label></div></div>
+                        <div id="cat4_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Hormonologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="TSH"> TSH</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="T3"> T3</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="T4"> T4</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="FSH / LH"> FSH / LH</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Béta-HCG (Grossesse)"> Béta-HCG (Grossesse)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Testostérone"> Testostérone</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Progestérone"> Progestérone</label></div></div>
+                        <div id="cat5_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Marqueurs Tumoraux</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="PSA Total"> PSA Total</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="AFP"> AFP</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="CA 15-3"> CA 15-3</label></div></div>
+                        <div id="cat6_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Bactériologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="ECBU"> ECBU</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Hémoculture"> Hémoculture</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Coproculture"> Coproculture</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="FCV"> FCV</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="PV / PU"> PV / PU</label></div></div>
+                        <div id="cat7_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Parasitologie</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Goutte Épaisse"> Goutte Épaisse</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Selle KAOP"> Selle KAOP</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Bilharziose Urinaire"> Bilharziose Urinaire</label></div></div>
+                        <div id="cat8_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Analyses d'Urines</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Urines (ASA)"> Urines (ASA)</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Protéinurie 24h"> Protéinurie 24h</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Microalbuminurie"> Microalbuminurie</label></div></div>
+                        <div id="cat9_edition" class="categorie-analyses"><strong style="color:#0369A1; font-size:12px; display:block; margin-bottom:5px;">Liquides Biologiques</strong><div class="grille-analyses"><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Cyto-Chimie liquide"> Cyto-Chimie liquide</label><label class="analyse-item"><input type="checkbox" name="analyses_edition" value="Bactériologie liquide"> Bactériologie liquide</label></div></div>
+                    </div>
+                </div>
+
+                <div id="edit_bloc-hospitalisation" class="section-form-bloc" style="background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:12px; margin-top:12px;">
+                    <div style="font-weight:bold; color:#0F172A; margin-bottom:6px;">🏥 HOSPITALISATION</div>
+                    <div style="display:flex; gap:15px; margin-bottom:10px; align-items:center; flex-wrap:wrap;"><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_edition" value="01 - Oui" onchange="gererCocheUniqueHospit('cb_hospit_edition', this)"> 🟢 01 - Oui</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_edition" value="02 - Non" onchange="gererCocheUniqueHospit('cb_hospit_edition', this)"> 🔴 02 - Non</label><label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" name="cb_hospit_edition" value="03 - Transfert externe" onchange="gererCocheUniqueHospit('cb_hospit_edition', this)"> 🟠 03 - Transfert externe</label></div>
+                    <div class="champ-groupe"><textarea id="edit_hospitalisation_details" rows="2" placeholder="Durée, motif ou détails d'hospitalisation..."></textarea></div>
+                </div>
+
+                <div class="grille-2" style="margin-top:12px;"><div class="champ-groupe"><label>Contrôle Requis</label><select id="edit_besoin_controle"><option value="Non">Non</option><option value="Oui">Oui</option></select></div><div class="champ-groupe"><label>Prochain RDV</label><input type="date" id="edit_prochain_rdv"></div></div>
+                <div class="champ-groupe" style="margin-top:10px;"><label>Notes</label><textarea id="edit_notes" rows="2"></textarea></div>
+                <button type="submit" class="btn-principal" style="margin-top:15px; background:#0D9488;">Sauvegarder</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Inventaire -->
+    <div id="modal-inventaire" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="carte" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 id="titre-modal-inventaire">📦 Ajouter un Article</h2>
+                <button onclick="fermerModalInventaire()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+            <form id="formInventaire">
+                <input type="hidden" id="inv_id">
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Référence</label><input type="text" id="inv_reference" placeholder="Ex: MED-MAT-001"></div>
+                    <div class="champ-groupe"><label>Désignation Produit *</label><input type="text" id="inv_designation" required></div>
+                    <div class="champ-groupe">
+                        <label>Catégorie</label>
+                        <select id="inv_categorie">
+                            <option value="Matériel & Consommables">Matériel & Consommables</option>
+                            <option value="Comprimés & Gélules">Comprimés & Gélules</option>
+                            <option value="Médicaments Oraux & Divers">Médicaments Oraux & Divers</option>
+                            <option value="Sirops & Suspensions">Sirops & Suspensions</option>
+                            <option value="Injectables & Solutions">Injectables & Solutions</option>
+                            <option value="Dermatologie & Local">Dermatologie & Local</option>
+                            <option value="Autres">Autres (Consultations, Services...)</option>
+                            <option value="Analyses Médicales">Analyses Médicales</option>
+                        </select>
+                    </div>
+                    <div class="champ-groupe">
+                        <label>Forme / Conditionnement</label>
+                        <select id="inv_forme">
+                            <option value="Matériel Médical">Matériel Médical</option>
+                            <option value="Comprimé">Comprimé</option>
+                            <option value="Gélule">Gélule</option>
+                            <option value="Sirop / Suspension">Sirop / Suspension</option>
+                            <option value="Injectable / Ampoule">Injectable / Ampoule</option>
+                            <option value="Crème / Pommade">Crème / Pommade</option>
+                            <option value="Unité / Flacon / Divers">Unité / Flacon / Divers</option>
+                            <option value="Examen Labo">Examen Labo</option>
+                        </select>
+                    </div>
+                    <div class="champ-groupe"><label>Date de Péremption</label><input type="date" id="inv_date_peremption"></div>
+                    <div class="champ-groupe"><label>Prix Unitaire (Ar)</label><input type="number" id="inv_prix" min="0" value="0"></div>
+                </div>
+                
+                <div class="section-form-bloc" style="background:#F8FAFC; border:1px solid #CBD5E1; margin-top:15px;">
+                    <div class="titre-bloc-form" style="color:#0F172A;">📊 MOUVEMENTS DE STOCK</div>
+                    <div class="grille-vitals" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                        <div class="champ-groupe"><label>Stock Initial</label><input type="number" id="inv_stock_initial" min="0" value="0"></div>
+                        <div class="champ-groupe"><label>➕ Entrées (Cumul)</label><input type="number" id="inv_entrees" min="0" value="0"></div>
+                        <div class="champ-groupe"><label>➖ Sorties (Cumul)</label><input type="number" id="inv_sorties" min="0" value="0"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-principal" style="margin-top:15px; background:#0D9488;">💾 Enregistrer l'article</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Personnel -->
+    <div id="modal-personnel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="carte" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 id="titre-modal-personnel">👩‍⚕️ Ajouter un Employé</h2>
+                <button onclick="fermerModalPersonnel()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+            <form id="formPersonnel">
+                <input type="hidden" id="pers_id">
+                <div class="grille-2">
+                    <div class="champ-groupe"><label>Nom et Prénom *</label><input type="text" id="pers_nom_complet" required></div>
+                    <div class="champ-groupe"><label>Poste / Fonction</label><input type="text" id="pers_poste" placeholder="Ex: MEDECIN, PARAMED, COMPTABLE..."></div>
+                    <div class="champ-groupe"><label>Date d'embauche</label><input type="date" id="pers_date_embauche"></div>
+                    <div class="champ-groupe"><label>Téléphone</label><input type="text" id="pers_telephone"></div>
+                    <div class="champ-groupe"><label>Salaire Brut (Ar)</label><input type="number" id="pers_salaire_brut" min="0" value="0"></div>
+                    <div class="champ-groupe"><label>Salaire Net (Ar)</label><input type="number" id="pers_salaire_net" min="0" value="0"></div>
+                </div>
+                <div class="champ-groupe" style="margin-top:10px;"><label>Adresse</label><input type="text" id="pers_adresse"></div>
+                <button type="submit" class="btn-principal" style="margin-top:15px; background:#0284C7;">💾 Enregistrer l'employé</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE : SUIVI ET PAIEMENT MENSUEL -->
+    <div id="modal-paiement-personnel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="carte" style="width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>💳 Suivi & Règlement du Salaire</h2>
+                <button onclick="fermerModalPaiement()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+            
+            <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <div id="paie_nom_complet" style="font-weight:bold; font-size:16px; color:#0369A1;">-</div>
+                <div id="paie_poste_info" style="font-size:12px; color:#64748B; margin-top:2px;">-</div>
+                <div style="margin-top:6px; font-size:13px; color:#0F172A; display:flex; justify-content:space-between;">
+                    <span><strong>Salaire Brut :</strong> <span id="paie_salaire_brut_base" style="font-weight:bold;">0 Ar</span></span>
+                    <span><strong>Net Calculé :</strong> <span id="paie_salaire_net_base" style="font-weight:bold; color:#0D9488;">0 Ar</span></span>
+                </div>
+            </div>
+
+            <form id="formPaiementPersonnel" onsubmit="sauvegarderPaiementPersonnel(event)">
+                <input type="hidden" id="paie_personnel_id">
+
+                <div class="champ-groupe" style="margin-bottom:12px;">
+                    <label style="font-weight:bold;">📅 Sélectionner le Mois de Paie</label>
+                    <input type="month" id="paie_mois" required onchange="chargerPaiementMois()" style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; width:100%; font-size:13px; font-weight:bold; color:#0284C7;">
+                </div>
+
+                <div class="grille-2">
+                    <div class="champ-groupe">
+                        <label>➖ CNaPS 1% du Brut (Ar)</label>
+                        <input type="number" id="paie_cnaps" readonly style="background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; border-radius:6px; padding:8px; cursor:not-allowed;">
+                    </div>
+                    <div class="champ-groupe">
+                        <label>➖ IRSA (Ar)</label>
+                        <input type="number" id="paie_irsa" min="0" value="3000" oninput="calculerTotalPaiement()">
+                    </div>
+                    <div class="champ-groupe"><label>➕ Indemnités (Ar)</label><input type="number" id="paie_indemnites" min="0" value="0" oninput="calculerTotalPaiement()"></div>
+                    <div class="champ-groupe"><label>➖ Retards / Retenues (Ar)</label><input type="number" id="paie_retard" min="0" value="0" oninput="calculerTotalPaiement()"></div>
+                    <div class="champ-groupe"><label>➖ Avance sur Salaire (Ar)</label><input type="number" id="paie_avances" min="0" value="0" oninput="calculerTotalPaiement()"></div>
+                    <div class="champ-groupe"><label>📅 Date du Paiement</label><input type="date" id="paie_date_paiement"></div>
+                </div>
+
+                <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px; padding:12px; margin-top:12px; text-align:right;">
+                    <span style="font-size:12px; color:#64748B; font-weight:bold; display:block;">TOTAL NET À PAYER POUR CE MOIS</span>
+                    <div id="paie_total_affiche" style="font-size:22px; font-weight:800; color:#0284C7; margin-top:3px;">0 Ar</div>
+                </div>
+
+                <div class="champ-groupe" style="margin-top:12px;">
+                    <label style="font-weight:bold;">Statut du Règlement :</label>
+                    <div style="display:flex; gap:15px; margin-top:6px; align-items:center;">
+                        <label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="radio" name="paie_statut" value="Payé"> 🟢 <strong>Payé</strong></label>
+                        <label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="radio" name="paie_statut" value="Non payé" checked> 🔴 <strong>Non payé</strong></label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-principal" style="margin-top:15px; background:#0D9488; width:100%;">💾 Enregistrer le paiement</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE : SUIVI ET RAPPORT GÉNÉRAL DES SALAIRES -->
+    <div id="modal-suivi-global-paie" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="carte" style="width: 95%; max-width: 1100px; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>📊 Rapport & Suivi Général des Salaires Mensuels</h2>
+                <button onclick="fermerModalSuiviGlobalPaie()" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+
+            <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
+                <div class="champ-groupe" style="margin:0; flex-grow:1; max-width:300px;">
+                    <label style="font-weight:bold;">📅 Sélectionner le Mois de Paie :</label>
+                    <input type="month" id="global_paie_mois_select" onchange="chargerSuiviGlobalMois()" style="padding:8px; border:1px solid #CBD5E1; border-radius:6px; width:100%; font-size:13px; font-weight:bold; color:#0284C7;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:15px;">
+                <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:10px; border-radius:6px; text-align:center;">
+                    <span style="font-size:11px; color:#0369A1; font-weight:bold;">TOTAL NET À PAYER</span>
+                    <div id="global_total_net" style="font-size:16px; font-weight:bold; color:#0284C7; margin-top:3px;">0 Ar</div>
+                </div>
+                <div style="background:#F0FDF4; border:1px solid #BFE8E5; padding:10px; border-radius:6px; text-align:center;">
+                    <span style="font-size:11px; color:#0F766E; font-weight:bold;">TOTAL SALAIRES PAYÉS</span>
+                    <div id="global_total_paye" style="font-size:16px; font-weight:bold; color:#0D9488; margin-top:3px;">0 Ar</div>
+                </div>
+                <div style="background:#FEF2F2; border:1px solid #FCA5A5; padding:10px; border-radius:6px; text-align:center;">
+                    <span style="font-size:11px; color:#991B1B; font-weight:bold;">TOTAL RESTE À PAYER</span>
+                    <div id="global_total_reste" style="font-size:16px; font-weight:bold; color:#DC2626; margin-top:3px;">0 Ar</div>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                    <thead style="background:#1E293B; color:white;">
+                        <tr>
+                            <th style="padding:8px;">Matricule</th>
+                            <th style="padding:8px;">Nom & Prénom</th>
+                            <th style="padding:8px;">Poste</th>
+                            <th style="padding:8px; text-align:right;">Brut</th>
+                            <th style="padding:8px; text-align:right;">CNaPS (1%)</th>
+                            <th style="padding:8px; text-align:right;">IRSA</th>
+                            <th style="padding:8px; text-align:right;">Indemnités</th>
+                            <th style="padding:8px; text-align:right;">Retards/Avances</th>
+                            <th style="padding:8px; text-align:right;">Net à Payer</th>
+                            <th style="padding:8px; text-align:center;">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-suivi-global-paie" style="color:#0F172A;"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="suggestions-medicaments"></datalist>
+    <script src="app.js"></script>
+</body>
+</html>
